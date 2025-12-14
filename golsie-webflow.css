@@ -1,0 +1,155 @@
+<style>
+  .no-scroll { 
+    overflow: hidden !important;
+    height: 100vh;
+  }
+  
+  .header--white-border {
+    border-bottom: 2.5px solid white !important;
+  }
+  .modalsongthumbnail,
+  .spotify-iframe-modal,
+  .songlink-iframe-modal {
+    transition: opacity 0.3s ease;
+  }
+
+  .navmenulink.activepage {
+    color: #d4af37;
+  }
+
+  /* Loading state */
+  .spotify-iframe-modal:empty::before {
+    content: 'Loading player...';
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: rgba(255,255,255,0.5);
+  }
+
+    /* Loading state */
+  .songlink-iframe-modal:empty::before {
+    content: 'Loading player...';
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: rgba(255,255,255,0.5);
+  }
+  
+  /* Glassmorphism backdrop fade */
+  .modaloverlay {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
+  }
+
+  .modaloverlay.modal-active {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+
+  /* Modal container smooth scale */
+  .modalcontainer {
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .modaloverlay.modal-active .modalcontainer {
+    transform: scale(1);
+    opacity: 1;
+  }
+  
+  /* Loading indicator */
+  .modalloading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Loading spinner animation */
+  .modalloading::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 12px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* Loading state shows */
+  [data-shows-state="loading"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+  }
+
+  /* Loading spinner */
+  [data-shows-state="loading"]::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  [data-filter]:hover {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  [data-filter].active {
+    font-weight: 600;
+    color: black;
+    text-decoration: underline;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Empty state */
+  [data-shows-state="empty"] {
+    display: none;
+    text-align: center;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Dynamic content wrapper */
+  .modaldynamiccontent {
+    position: relative;
+    min-height: 200px;
+    transition: opacity 0.4s ease;
+  }
+  
+  /* Gallery thumbnail active state */
+    [data-gallery-thumb].activethumbnail {
+      opacity: 1 !important;
+    }
+
+    [data-gallery-thumb]:not(.activethumbnail) {
+      opacity: 0.6;
+    }
+
+    [data-gallery-thumb]:hover {
+      opacity: 1;
+    }
+</style>

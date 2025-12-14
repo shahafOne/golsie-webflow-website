@@ -1,0 +1,156 @@
+<script>
+(function() {
+  'use strict';
+
+  var IS_STAGING = false; // Set to true for staging environment
+  var CODE_FORCE_RAW_GITHUB = false; // Set to true to always use raw GitHub
+  var CODE_FORCE_FALLBACK = false; // Set to true to always use Webflow fallback
+  
+  var TIMEOUT = 5000;
+  var FALLBACK_ENABLED = true;
+  
+  var PRODUCTION_FILE = 'golsie-full.js';
+  var STAGING_FILE = 'golsie-staging.js';
+  var SCRIPT_FILE = IS_STAGING ? STAGING_FILE : PRODUCTION_FILE;
+
+  var GITHUB_TAG = 'main'; // @commit_hash/tag(v1XX)/main. @main will take up to 24HRS to refresh.
+  var GITHUB_CDN_URL = 'https://cdn.jsdelivr.net/gh/Shahaf1/golsie-webflow-website@' + GITHUB_TAG + '/' + SCRIPT_FILE;
+  var GITHUB_RAW_URL = 'https://raw.githubusercontent.com/Shahaf1/golsie-webflow-website/main/' + SCRIPT_FILE;
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var FORCE_FALLBACK = urlParams.has('fallback'); 
+  var FORCE_RAW_GITHUB = urlParams.has('raw'); 
+  
+  FORCE_RAW_GITHUB = FORCE_RAW_GITHUB || CODE_FORCE_RAW_GITHUB;
+  FORCE_FALLBACK = FORCE_FALLBACK || CODE_FORCE_FALLBACK;
+  
+  var cdnLoaded = false;
+  var rawGithubAttempted = false;
+  var fallbackExecuted = false;
+  var startTime = Date.now();
+  
+  if (FORCE_FALLBACK) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(loadFallback, 100);
+      });
+    } else {
+      setTimeout(loadFallback, 100);
+    }
+    return;
+  }
+  
+  if (FORCE_RAW_GITHUB) {
+    loadFromRawGithub();
+    return;
+  }
+  
+  loadFromCDN();
+  
+  function loadFromCDN() {
+    var script = document.createElement('script');
+    script.src = GITHUB_CDN_URL;
+    script.async = false;
+    script.crossOrigin = 'anonymous';
+    
+    script.onload = function() {
+      cdnLoaded = true;
+      setTimeout(function() {
+      var expectedClass = IS_STAGING ? 'staging-js' : 'git-js';
+      if (!window.GolsieScriptLoaded || !document.body.classList.contains(expectedClass)) {          
+        loadFromRawGithub();
+          }
+      }, 100);
+    };
+    
+    script.onerror = function() {
+      loadFromRawGithub();
+    };
+    
+    setTimeout(function() {
+      if (!cdnLoaded && !rawGithubAttempted) {
+        script.onload = null;
+        script.onerror = null;
+        loadFromRawGithub();
+      }
+    }, TIMEOUT);
+    
+    (document.head || document.getElementsByTagName('head')[0]).appendChild(script);
+  }
+  
+  function loadFromRawGithub() {
+    if (rawGithubAttempted) return;
+    rawGithubAttempted = true;
+    
+    fetch(GITHUB_RAW_URL + '?t=' + Date.now(), {
+      method: 'GET',
+      cache: 'no-cache'
+    })
+    .then(function(response) {
+      if (!response.ok) throw new Error('GitHub fetch failed: ' + response.status);
+      return response.text();
+    })
+    .then(function(scriptContent) {
+      try {
+        var processedCode = scriptContent.replace(
+          /document\.addEventListener\s*\(\s*["']DOMContentLoaded["']\s*,\s*function\s*\(\s*\)\s*\{/,
+          '(function() {'
+        );
+        
+        var lastIndex = processedCode.lastIndexOf('});');
+        if (lastIndex !== -1) {
+          processedCode = processedCode.substring(0, lastIndex) + '})();';
+        }
+        
+        var originalClass = IS_STAGING ? 'staging-js' : 'git-js';
+        var forceClass = IS_STAGING ? 'forcestaging-js' : 'forcegit-js';
+        processedCode = processedCode.replace(
+          new RegExp("document\\.body\\.classList\\.add\\s*\\(\\s*['\"]" + originalClass + "['\"]\\s*\\)", 'g'),
+          "document.body.classList.add('" + forceClass + "')"
+        );
+        
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.textContent = processedCode;
+        
+        (document.body || document.head).appendChild(script);
+        
+        setTimeout(function() {
+          if (window.GolsieScriptLoaded && document.body.classList.contains('forcegit-js')) {
+            console.log('Raw loaded');
+          } else if (FALLBACK_ENABLED && !FORCE_RAW_GITHUB) {
+            loadFallback();
+          }
+        }, 500);
+        
+      } catch (e) {
+        console.error('Error:', e.message);
+        if (FALLBACK_ENABLED && !FORCE_RAW_GITHUB) loadFallback();
+      }
+    })
+    .catch(function(error) {
+      console.error('Fetch failed:', error.message);
+      if (FALLBACK_ENABLED && !FORCE_RAW_GITHUB) loadFallback();
+    });
+  }
+  
+  function loadFallback() {
+    if (fallbackExecuted) return;
+    fallbackExecuted = true;
+    
+    if (typeof window.GolsieFallback === 'function') {
+      try {
+        window.GolsieFallback();
+        document.body.classList.add('webflow-js');
+        document.body.classList.remove('git-js', 'forcegit-js', 'staging-js', 'forcestaging-js');
+        console.log('Fallback loaded');
+      } catch (e) {
+        console.error('Fallback error:', e.message);
+      }
+    } else {
+      console.error('No fallback found');
+    }
+  }
+  
+})();
+</script>

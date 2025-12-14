@@ -1,0 +1,1328 @@
+document.addEventListener("DOMContentLoaded", function() {
+  
+  var Config = {
+    menuAnimationDuration: 250,
+    menuToModalCloseDelay: 300,
+    modalAnimationDuration: 300,
+    modalLoadingMinTime: 700,
+    modalLoadingTimeout: 4000,
+    contentFadeInDelay: 100,
+    songlinkExtraDelay: 300,
+    spotifyTimeoutDesktop: 4000,
+    spotifyTimeoutIOS: 1500,
+    videoKeepAliveInterval: 90000,
+    hashRemovalDelay: 400,
+    galleryComponentLoadDelay: 500,
+
+    bandsintownApiKey: '43aa4e2b7dc992c34f1bf8503a4d9667',
+    bandsintownArtistName: 'Golsie',
+    bandsintownOtherArtists: [
+      {
+        name: 'One: FortyFive Band',         
+        apiKey: '9cbab9f2cdfcee8711eefe84b54035d8'  
+      }
+    ],
+    showsMaxDisplay: 100,
+    showsLoadingMinTime: 500,
+    showsDefaultFilter: 'all'
+  };
+  
+  var ModalSelectors = {
+    songlink: {
+      thumbnail: '.modalsongthumbnail',
+      title: '.modaltitletext',
+      spotifyContainer: '.spotify-iframe-modal',
+      songlinkIframe: '.songlink-iframe-modal iframe', 
+      songlinkIframeContainer: '.songlink-iframe-modal', 
+      dynamicContent: '.modaldynamiccontent',  
+      loadingIndicator: '.modalloading',  
+      spotifyiframe_height: '82',
+    },
+    youtube: {
+      title: '.modaltitletextyoutube',
+      contentClass: '.modalcontentyoutubelink',
+      dynamicContent: '.modalcontentyoutubelink .modaldynamiccontent',
+      loadingIndicator: '.modalloading',
+      videoWrapper: '.modalyoutubewrapper',
+      youtubeElement: '.modalyoutubewrapper iframe'
+    }
+  };
+
+  var MenuSystem = {
+    config: {
+      hamburgerSelector: '.hamburgerwrapper',
+      headerSelector: '.headersection',
+      whiteBorderClass: 'header--white-border'
+    },
+    state: {
+      isAnimating: false,
+      menuOpen: false,
+      scrollY: 0,
+      modalWasOpen: false
+    },
+    getAllHamburgers: function() {
+      return document.querySelectorAll(this.config.hamburgerSelector);
+    },
+    getAllHeaders: function() {
+      return document.querySelectorAll(this.config.headerSelector);
+    },
+    preventScroll: function(e) {
+      if (MenuSystem.state.menuOpen) e.preventDefault();
+    },
+    addWhiteBorder: function() {
+      var headers = this.getAllHeaders();
+      headers.forEach(function(header) {
+        if (header) header.classList.add(MenuSystem.config.whiteBorderClass);
+      });
+    },
+    removeWhiteBorder: function() {
+      var headers = this.getAllHeaders();
+      headers.forEach(function(header) {
+        if (header) header.classList.remove(MenuSystem.config.whiteBorderClass);
+      });
+    },
+    openMenu: function() {
+      this.state.modalWasOpen = modalReady && ModalSystem.isModalOpen();
+      if (!this.state.modalWasOpen) {
+        this.state.scrollY = window.scrollY;
+        document.body.style.top = -this.state.scrollY + 'px';
+      }
+      document.body.classList.add('no-scroll');
+      var self = this;
+      setTimeout(function() {
+        self.addWhiteBorder();
+      }, Config.menuAnimationDuration);
+      this.state.menuOpen = true;
+      setTimeout(function() {
+        if (modalReady && ModalSystem.isModalOpen()) {
+          ModalSystem.close();
+        }
+      }, Config.menuAnimationDuration + Config.menuToModalCloseDelay);
+    },
+    closeMenu: function() {
+      document.body.classList.remove('no-scroll');
+      if (!this.state.modalWasOpen) {
+        var top = parseInt(document.body.style.top || '0', 10);
+        document.body.style.top = '';
+        window.scrollTo(0, -top);
+      }
+      this.removeWhiteBorder();
+      this.state.menuOpen = false;
+      this.state.modalWasOpen = false;
+    },
+    toggle: function() {
+      if (this.state.isAnimating) return;
+      this.state.isAnimating = true;
+      if (!this.state.menuOpen) {
+        this.openMenu();
+      } else {
+        this.closeMenu();
+      }
+      var self = this;
+      setTimeout(function() {
+        self.state.isAnimating = false;
+      }, Config.menuAnimationDuration);
+    },
+    init: function() {
+      var self = this;
+      document.addEventListener('touchmove', this.preventScroll, { passive: false });
+      document.addEventListener('wheel', this.preventScroll, { passive: false });
+      var hamburgers = this.getAllHamburgers();
+      if (hamburgers.length > 0) {
+        hamburgers.forEach(function(hamburger) {
+          hamburger.addEventListener('click', function() {
+            self.toggle();
+          });
+        });
+      }
+    }
+  };
+  MenuSystem.init();
+
+  var video = document.querySelector('.homepagebgvideo video');
+  if (video) {
+    function keepPlaying() {
+      if (document.hidden) return;
+      if (video.paused || video.readyState < 3) video.play().catch(function(){});
+      if (video.ended) {
+        video.currentTime = 0;
+        video.play().catch(function(){});
+      }
+    }
+    setInterval(keepPlaying, Config.videoKeepAliveInterval);
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && video.paused) video.play().catch(function(){});
+    });
+  }
+
+  ['.morelinkswrapperlink','.footerdesktop .footerlogo .footerlogowrapperlink','.footermobile .footerlogo .footerlogowrapperlink'].forEach(function(selector) {
+    var el = document.querySelector(selector);
+    if (el) {
+      el.addEventListener('click', function() {
+        setTimeout(function() {
+          history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        }, Config.hashRemovalDelay);
+      });
+    }
+  });
+
+  var NavigationHelper = {
+    config: {
+      navLinkSelector: '[data-page]',
+      activeClass: 'activepage',
+      parentPages: ['shop', 'music', 'shows', 'memories']
+    },
+    getCurrentPage: function() {
+      var path = window.location.pathname;
+      var segments = path.split('/').filter(Boolean);
+      if (segments.length === 0) return 'home';
+      var firstSegment = segments[0];
+      if (segments.length > 1 && this.config.parentPages.indexOf(firstSegment) !== -1) {
+        return firstSegment;
+      }
+      return segments[segments.length - 1];
+    },
+    updateActiveState: function() {
+      var currentPage = this.getCurrentPage();
+      var navLinks = document.querySelectorAll(this.config.navLinkSelector);
+      navLinks.forEach(function(link) {
+        var linkPage = link.getAttribute('data-page');
+        if (linkPage === currentPage || (currentPage === 'home' && (linkPage === '' || linkPage === 'home')) || (window.location.pathname === '/' && (linkPage === 'home' || linkPage === ''))) {
+          link.classList.add(NavigationHelper.config.activeClass);
+        } else {
+          link.classList.remove(NavigationHelper.config.activeClass);
+        }
+      });
+    },
+    init: function() {
+      this.updateActiveState();
+    }
+  };
+  NavigationHelper.init();
+
+  var GallerySystem = {
+    galleries: [],
+    createGallery: function(config) {
+      return {
+        config: config || {
+          mainImageSelector: '[data-gallery-main]',
+          thumbnailSelector: '[data-gallery-thumb]',
+          prevArrowSelector: '[data-gallery-prev]',
+          nextArrowSelector: '[data-gallery-next]',
+          activeClass: 'activethumbnail'
+        },
+        state: {
+          currentIndex: 0,
+          images: [],
+          isLoading: false
+        },
+        init: function() {
+          var self = this;
+          this.mainImage = document.querySelector(this.config.mainImageSelector);
+          this.thumbnails = document.querySelectorAll(this.config.thumbnailSelector);
+          this.prevArrow = document.querySelector(this.config.prevArrowSelector);
+          this.nextArrow = document.querySelector(this.config.nextArrowSelector);
+          if (!this.mainImage || this.thumbnails.length === 0) return false;
+          this.thumbnails.forEach(function(thumb) {
+            var img = thumb.querySelector('img');
+            if (img) {
+              self.state.images.push({
+                src: thumb.getAttribute('data-image-src') || img.src,
+                srcset: thumb.getAttribute('data-image-srcset') || img.srcset || '',
+                sizes: img.getAttribute('sizes') || ''
+              });
+            }
+          });
+          if (this.thumbnails[0]) {
+            this.thumbnails[0].classList.add(this.config.activeClass);
+          }
+          this.mainImage.style.transition = 'opacity 0.3s ease';
+          this.thumbnails.forEach(function(thumb, index) {
+            thumb.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              self.goToImage(index);
+            });
+            thumb.style.cursor = 'pointer';
+          });
+          if (this.prevArrow) {
+            this.prevArrow.addEventListener('click', function(e) {
+              e.preventDefault();
+              self.prev();
+            });
+            this.prevArrow.style.cursor = 'pointer';
+          }
+          if (this.nextArrow) {
+            this.nextArrow.addEventListener('click', function(e) {
+              e.preventDefault();
+              self.next();
+            });
+            this.nextArrow.style.cursor = 'pointer';
+          }
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') self.prev();
+            if (e.key === 'ArrowRight') self.next();
+          });
+          this.setupTouchEvents();
+          return true;
+        },
+        setupTouchEvents: function() {
+          var self = this;
+          var touchStartX = 0;
+          var touchEndX = 0;
+          var touchStartY = 0;
+          var touchEndY = 0;
+          var minSwipeDistance = 50;
+          var swipeContainer = this.mainImage.parentElement || this.mainImage;
+          swipeContainer.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+          }, { passive: true });
+          swipeContainer.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            self.handleSwipe(touchStartX, touchEndX, touchStartY, touchEndY, minSwipeDistance);
+          }, { passive: true });
+        },
+        handleSwipe: function(startX, endX, startY, endY, minDistance) {
+          var deltaX = endX - startX;
+          var deltaY = endY - startY;
+          if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minDistance) {
+            if (deltaX > 0) {
+              this.prev();
+            } else {
+              this.next();
+            }
+          }
+        },
+        goToImage: function(index) {
+          if (index < 0 || index >= this.state.images.length || this.state.isLoading) return;
+          this.state.isLoading = true;
+          var imageData = this.state.images[index];
+          var self = this;
+          this.mainImage.style.opacity = '0.3';
+          var preloader = new Image();
+          preloader.onload = function() {
+            self.mainImage.src = imageData.src;
+            self.mainImage.srcset = imageData.srcset || imageData.src;
+            if (imageData.sizes) self.mainImage.setAttribute('sizes', imageData.sizes);
+            setTimeout(function() {
+              self.mainImage.style.opacity = '1';
+              self.state.isLoading = false;
+            }, 50);
+          };
+          preloader.onerror = function() {
+            self.mainImage.style.opacity = '1';
+            self.state.isLoading = false;
+          };
+          preloader.src = imageData.src;
+          this.thumbnails.forEach(function(thumb, i) {
+            if (i === index) {
+              thumb.classList.add(self.config.activeClass);
+            } else {
+              thumb.classList.remove(self.config.activeClass);
+            }
+          });
+          this.state.currentIndex = index;
+        },
+        next: function() {
+          var nextIndex = (this.state.currentIndex + 1) % this.state.images.length;
+          this.goToImage(nextIndex);
+        },
+        prev: function() {
+          var prevIndex = (this.state.currentIndex - 1 + this.state.images.length) % this.state.images.length;
+          this.goToImage(prevIndex);
+        }
+      };
+    },
+    init: function(customConfig) {
+      var gallery = this.createGallery(customConfig);
+      var initialized = gallery.init();
+      if (initialized) {
+        this.galleries.push(gallery);
+      }
+      return gallery;
+    },
+    initAll: function() {
+      this.init();
+    }
+  };
+  setTimeout(function() {
+    GallerySystem.initAll();
+  }, Config.galleryComponentLoadDelay);
+
+  var ShowsSystem = {
+    config: {
+      templateSelector: '[data-event-type="template"]',
+      containerSelector: '[data-shows-container]',
+      loadingSelector: '[data-shows-state="loading"]',
+      emptySelector: '[data-shows-state="empty"]'
+    },
+    state: {
+      allShows: [],
+      upcomingShows: [],
+      pastShows: [],
+      filteredShows: [],
+      currentFilter: 'all',
+      isLoading: false,
+      isCached: false
+    },
+    init: function() {
+      var template = document.querySelector(this.config.templateSelector);
+      var container = document.querySelector(this.config.containerSelector);
+      if (!template || !container) return;
+      template.style.display = 'none';
+      this.template = template;
+      this.container = container;
+      this.showLoading();
+      this.setupFilterButtons();
+      var urlParams = new URLSearchParams(window.location.search);
+      var filterParam = urlParams.get('filter');      
+      this.fetchShows(filterParam);
+    },
+    showLoading: function() {
+      this.hideAllShows();
+      var loading = document.querySelector(this.config.loadingSelector);
+      if (loading) loading.style.display = 'flex';
+      var empty = document.querySelector(this.config.emptySelector);
+      if (empty) empty.style.display = 'none';
+    },
+    hideLoading: function() {
+      var loading = document.querySelector(this.config.loadingSelector);
+      if (loading) loading.style.display = 'none';
+    },
+    showEmpty: function() {
+      this.hideAllShows();
+      var empty = document.querySelector(this.config.emptySelector);
+      if (empty) empty.style.display = 'block';
+    },
+    hideAllShows: function() {
+      if (!this.container) return;     
+      var children = Array.from(this.container.children);
+      children.forEach(function(child) {
+        if (child.getAttribute('data-event-type') === 'generated') {
+          child.style.display = 'none'; 
+        }
+      });
+    },
+    fetchShows: function(initialFilter) {
+      var self = this;
+      var fetchPromises = [];
+      
+      var golsieUpcomingUrl = 'https://rest.bandsintown.com/artists/' + 
+        Config.bandsintownArtistName + '/events?app_id=' + 
+        Config.bandsintownApiKey + '&date=upcoming'; 
+      var golsiePastUrl = 'https://rest.bandsintown.com/artists/' + 
+        Config.bandsintownArtistName + '/events?app_id=' + 
+        Config.bandsintownApiKey + '&date=past';
+      
+      fetchPromises.push(
+        fetch(golsieUpcomingUrl).then(function(r) { return r.json(); }),
+        fetch(golsiePastUrl).then(function(r) { return r.json(); })
+      );
+      
+      if (Config.bandsintownOtherArtists && Config.bandsintownOtherArtists.length > 0) {
+        Config.bandsintownOtherArtists.forEach(function(artist) {
+          var upcomingUrl = 'https://rest.bandsintown.com/artists/' + 
+            artist.name + '/events?app_id=' + 
+            artist.apiKey + '&date=upcoming';
+          
+          var pastUrl = 'https://rest.bandsintown.com/artists/' + 
+            artist.name + '/events?app_id=' + 
+            artist.apiKey + '&date=past';
+          
+          fetchPromises.push(
+            fetch(upcomingUrl).then(function(r) { return r.json(); }),
+            fetch(pastUrl).then(function(r) { return r.json(); })
+          );
+        });
+      }
+      
+      Promise.all(fetchPromises)
+        .then(function(results) {
+          var golsieUpcoming = results[0] || [];
+          var golsiePast = results[1] || [];
+          
+          golsieUpcoming.forEach(function(show) {
+            show.isGolsie = true;
+          });
+          golsiePast.forEach(function(show) {
+            show.isGolsie = true;
+          });
+          
+          var otherUpcoming = [];
+          var otherPast = [];
+          
+          for (var i = 2; i < results.length; i += 2) {
+            var upcoming = results[i] || [];
+            var past = results[i + 1] || [];
+            
+            upcoming.forEach(function(show) {
+              show.isGolsie = false;
+            });
+            past.forEach(function(show) {
+              show.isGolsie = false;
+            });
+            
+            otherUpcoming = otherUpcoming.concat(upcoming);
+            otherPast = otherPast.concat(past);
+          }
+          
+          self.state.golsieShows = golsieUpcoming.concat(golsiePast);
+          self.state.otherShows = otherUpcoming.concat(otherPast);
+          self.state.upcomingShows = golsieUpcoming.concat(otherUpcoming);
+          self.state.pastShows = golsiePast.concat(otherPast);
+          self.state.allShows = self.state.upcomingShows.concat(self.state.pastShows);
+          
+          self.state.isCached = true;
+          var filterToApply = initialFilter || Config.showsDefaultFilter;
+          var validFilters = ['all', 'golsie', 'other', 'previous'];
+          if (validFilters.indexOf(filterToApply) === -1) {
+            filterToApply = Config.showsDefaultFilter;
+          }
+          self.applyFilter(filterToApply);        
+        })
+        .catch(function(error) {
+          console.error('[Golsie] Shows fetch error:', error);
+          self.hideLoading();
+          self.showEmpty();
+        });
+    },
+    applyFilter: function(filterType) {
+      var self = this;
+      self.state.currentFilter = filterType;
+      var showsToDisplay = [];
+      
+      switch(filterType) {
+        case 'all':
+          showsToDisplay = self.state.upcomingShows;
+          break;
+          
+        case 'golsie':
+          showsToDisplay = self.state.upcomingShows.filter(function(show) {
+            return show.isGolsie === true;
+          });
+          break;
+          
+        case 'other':
+          showsToDisplay = self.state.upcomingShows.filter(function(show) {
+            return show.isGolsie === false;
+          });
+          break;
+          
+        case 'previous':
+          showsToDisplay = self.state.pastShows;
+          break;
+          
+        default:
+          showsToDisplay = self.state.upcomingShows;
+      }
+      
+      self.state.filteredShows = showsToDisplay;
+      self.renderShows(showsToDisplay);
+      self.updateFilterButtons(filterType);
+      self.updateCategoryTagVisibility(filterType);
+    },
+    updateFilterButtons: function(activeFilter) {
+      var buttons = document.querySelectorAll('[data-filter]');
+      buttons.forEach(function(button) {
+        var filterType = button.getAttribute('data-filter');
+        if (filterType === activeFilter) {
+          button.classList.add('active');
+        } else {
+          button.classList.remove('active');
+        }
+      });
+    },
+    setupFilterButtons: function() {
+      var self = this;
+      var buttons = document.querySelectorAll('[data-filter]');
+      buttons.forEach(function(button) {
+        button.addEventListener('click', function() {
+          var filterType = this.getAttribute('data-filter');
+          self.showLoading();
+          setTimeout(function() {
+            self.applyFilter(filterType);
+          }, 200);
+        });
+      });
+      self.updateFilterButtons(Config.showsDefaultFilter);
+    },
+    updateCategoryTagVisibility: function(filterType) {
+      if (!this.container) return;
+      
+      var allTags = this.container.querySelectorAll('[data-target="category-tag"]');
+      
+      allTags.forEach(function(tag) {
+        // Show tags only on "ALL" filter
+        if (filterType === 'all') {
+          tag.style.display = 'flex';
+        } else {
+          tag.style.display = 'none';
+        }
+      });
+    },
+    renderShows: function(shows) {
+      var self = this;
+      this.hideAllShows();
+      var children = Array.from(self.container.children);
+      children.forEach(function(child) {
+        if (child !== self.template && child.getAttribute('data-event-type') === 'generated') {
+          self.container.removeChild(child);
+        }
+      });
+      
+      setTimeout(function() {
+        self.hideLoading();
+        
+        if (shows.length === 0) {
+          self.showEmpty();
+          return;
+        }        
+        var sortedShows;
+        if (self.state.currentFilter === 'previous') {
+          sortedShows = shows.sort(function(a, b) {
+            return new Date(b.datetime) - new Date(a.datetime);
+          });
+        } else {
+          sortedShows = shows.sort(function(a, b) {
+            return new Date(a.datetime) - new Date(b.datetime);
+          });
+        } 
+        var displayShows = sortedShows.slice(0, Config.showsMaxDisplay);
+        displayShows.forEach(function(show) {
+          self.createShowItem(show);
+        });
+      }, Config.showsLoadingMinTime);
+    },
+    createShowItem: function(show) {
+      var item = this.template.cloneNode(true);
+      item.style.display = 'grid';
+      item.setAttribute('data-event-type', 'generated');
+      item.setAttribute('data-event-id', show.id);
+      if (show.isGolsie) {
+        item.setAttribute('data-event-artist-type', 'golsie');
+      } else {
+        item.setAttribute('data-event-artist-type', 'other');
+      }
+      var date = new Date(show.datetime);
+      var dateFormatted = this.formatDate(date);
+      var timeFormatted = this.formatTime(date);
+      var manualDate = item.getAttribute('data-event-date');
+      var manualTime = item.getAttribute('data-event-time');
+      var manualVenue = item.getAttribute('data-event-venue');
+      var manualLocation = item.getAttribute('data-event-location');
+      var dateEl = item.querySelector('[data-target="date"]');
+      if (dateEl) dateEl.textContent = manualDate || dateFormatted;
+      var timeEl = item.querySelector('[data-target="time"]');
+      if (timeEl) timeEl.textContent = manualTime || timeFormatted;
+      var venueEl = item.querySelector('[data-target="venue"]');
+      if (venueEl) venueEl.textContent = manualVenue || show.venue.name;
+      var locationEl = item.querySelector('[data-target="location"]');
+      if (locationEl) {
+        var apiLocation = show.venue.city + ', ' + show.venue.country;
+        locationEl.textContent = manualLocation || apiLocation;
+      }
+      var manualTicketUrl = item.getAttribute('data-event-ticket-url');
+      var manualTicketText = item.getAttribute('data-event-ticket-text');
+      var ticketBtn = item.querySelector('[data-target="ticket-button"]');
+      if (ticketBtn) {
+        var ticketText = item.querySelector('[data-target="ticket-text"]');
+        var ticketUrl = manualTicketUrl;
+        if (!ticketUrl) {
+          if (show.offers && show.offers.length > 0 && show.offers[0].url) {
+            ticketUrl = show.offers[0].url;
+          } else {
+            ticketUrl = show.url;
+          }
+        }
+        var buttonText = manualTicketText;
+        if (!buttonText) {
+          if (show.offers && show.offers.length > 0 && show.offers[0].url) {
+            buttonText = 'Tickets';
+          } else if (show.free) {
+            buttonText = 'Free';
+          } else {
+            buttonText = 'Tickets';
+          }
+        }
+        if (this.state.currentFilter === 'previous') {
+          buttonText = 'Ended';
+          ticketBtn.style.opacity = '0.6';
+        }
+        ticketBtn.href = ticketUrl;
+        ticketBtn.target = '_blank';
+        if (ticketText) ticketText.textContent = buttonText;
+      }
+      var manualAddress = item.getAttribute('data-event-address');
+      var apiAddress = this.getFullAddress(show.venue);
+      var fullAddress = manualAddress || apiAddress;
+      var addressText = item.querySelector('[data-target="address-text"]');
+      if (addressText) addressText.textContent = fullAddress;
+      var mapsLink = item.querySelector('[data-target="maps-link"]');
+      if (mapsLink) {
+        var fullAddressForMaps = this.getFullAddressForMaps(show.venue);
+        if (fullAddressForMaps) {
+          var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullAddressForMaps);
+          mapsLink.href = mapsUrl;
+          mapsLink.target = '_blank';
+        } else if (show.venue.latitude && show.venue.longitude) {
+          var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + show.venue.latitude + ',' + show.venue.longitude;
+          mapsLink.href = mapsUrl;
+          mapsLink.target = '_blank';
+        } else {
+          mapsLink.style.display = 'none';
+        }
+      }
+      var manualDescription = item.getAttribute('data-event-description');
+      var apiDescription = show.description || 'No description available';
+      var fullDescription = manualDescription || apiDescription;
+      var descText = item.querySelector('[data-target="description-text"]');
+      if (descText) descText.textContent = fullDescription;
+      var categoryTag = item.querySelector('[data-target="category-tag"]');
+      if (categoryTag) {
+        var tagText = categoryTag.querySelector('[data-target="category-tag-text"]');
+        var otherTagColor = item.getAttribute('data-other-tag-color') || '#FF6B00';
+        if (show.isGolsie) {
+          if (tagText) tagText.textContent = 'GOLSIE';
+        } else {
+          if (tagText) tagText.textContent = 'OTHER';
+          categoryTag.style.backgroundColor = otherTagColor;
+        }
+        if (this.state.currentFilter === 'all') {
+          categoryTag.style.display = 'flex';
+        } else {
+          categoryTag.style.display = 'none';
+        }
+      }
+      this.attachToggleHandlers(item);
+      this.container.appendChild(item);
+    },
+    formatDate: function(date) {
+      var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      var days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+      var month = months[date.getMonth()];
+      var day = date.getDate();
+      var dayName = days[date.getDay()];
+      return month + ' ' + day + ' ' + dayName;
+    },
+    formatTime: function(date) {
+      var hours = date.getHours();
+      var minutes = date.getMinutes();
+      var ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      return hours + ':' + minutes + ' ' + ampm;
+    },
+    getFullAddress: function(venue) {
+      var parts = [];
+      if (venue.street_address) parts.push(venue.street_address);
+      return parts.length > 0 ? parts.join(', ') : 'Address not available';
+    },
+    getFullAddressForMaps: function(venue) {
+      var parts = [];
+      if (venue.street_address) parts.push(venue.street_address);
+      if (venue.city) parts.push(venue.city);
+      if (venue.region) parts.push(venue.region);
+      if (venue.country) parts.push(venue.country);
+      return parts.length > 0 ? parts.join(', ') : '';
+    },
+    attachToggleHandlers: function(item) {
+      var self = this;
+      var addressBtn = item.querySelector('[data-action="toggle-address"]');
+      var addressContent = item.querySelector('[data-target="address-content"]');
+      if (addressBtn && addressContent) {
+        addressBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          document.querySelectorAll('[data-action="toggle-address"]').forEach(function(otherBtn) {
+            if (otherBtn !== addressBtn) {
+              var otherContent = otherBtn.parentElement.querySelector('[data-target="address-content"]');
+              if (otherContent && otherContent.getAttribute('data-expanded') === 'true') {
+                otherBtn.style.display = 'block';
+                otherContent.style.display = 'none';
+                otherContent.setAttribute('data-expanded', 'false');
+              }
+            }
+          });
+          addressBtn.style.display = 'none';
+          addressContent.style.display = 'flex';
+          addressContent.setAttribute('data-expanded', 'true');
+        });
+      }
+      var descBtn = item.querySelector('[data-action="toggle-description"]');
+      var descPopup = item.querySelector('[data-target="description-popup"]');
+      var descClose = item.querySelector('[data-action="close-description"]');
+      if (descBtn && descPopup) {
+        descBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          document.querySelectorAll('[data-action="toggle-address"]').forEach(function(addrBtn) {
+            var addrContent = addrBtn.parentElement.querySelector('[data-target="address-content"]');
+            if (addrContent && addrContent.getAttribute('data-expanded') === 'true') {
+              addrBtn.style.display = 'block';
+              addrContent.style.display = 'none';
+              addrContent.setAttribute('data-expanded', 'false');
+            }
+          });
+          document.querySelectorAll('[data-target="description-popup"]').forEach(function(popup) {
+            if (popup !== descPopup) {
+              popup.style.display = 'none';
+              popup.setAttribute('data-visible', 'false');
+            }
+          });
+          var isVisible = descPopup.getAttribute('data-visible') === 'true';
+          if (isVisible) {
+            descPopup.style.display = 'none';
+            descPopup.setAttribute('data-visible', 'false');
+          } else {
+            descPopup.style.display = 'block';
+            descPopup.setAttribute('data-visible', 'true');
+          }
+        });
+        if (descClose) {
+          descClose.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            descPopup.style.display = 'none';
+            descPopup.setAttribute('data-visible', 'false');
+          });
+        }
+        document.addEventListener('click', function(e) {
+          if (!descPopup.contains(e.target) && !descBtn.contains(e.target)) {
+            descPopup.style.display = 'none';
+            descPopup.setAttribute('data-visible', 'false');
+          }
+        });
+      }
+    }
+  };
+  setTimeout(function() {
+    ShowsSystem.init();
+  }, Config.galleryComponentLoadDelay);
+
+  var SpotifyHelper = {
+    fetchOEmbed: function(spotifyUrl, callback) {
+      fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(spotifyUrl))
+        .then(function(response) {
+          if (!response.ok) throw new Error('Spotify oEmbed failed');
+          return response.json();
+        })
+        .then(function(data) { callback(null, data); })
+        .catch(function(error) { callback(error, null); });
+    }
+  };
+  
+  var DeviceHelper = {
+    isMobile: function() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    },
+    isIOS: function() {
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+  };
+
+  var ModalSystem = {
+    overlay: null,
+    container: null,
+    isOpen: false,
+    scrollPosition: 0,
+    currentModalType: null,
+    currentContent: null,
+    modalTypes: {},
+    config: {
+      overlayClass: 'modaloverlay',
+      containerClass: 'modalcontainer',
+      activeClass: 'modal-active',
+      animationDuration: Config.modalAnimationDuration
+    },
+    init: function() {
+      this.overlay = document.querySelector('.' + this.config.overlayClass);
+      if (!this.overlay) return false;
+      this.container = this.overlay.querySelector('.' + this.config.containerClass);
+      if (!this.container) return false;
+      this.overlay.style.display = 'none';
+      this.setupEventListeners();
+      return true;
+    },
+    registerModalType: function(typeName, config) {
+      this.modalTypes[typeName] = {
+        contentClass: config.contentClass || null,
+        onClose: config.onClose || null,
+        afterClose: config.afterClose || null,
+        updateContent: config.updateContent || null
+      };
+    },
+    setupEventListeners: function() {
+      var self = this;
+      this.overlay.addEventListener('click', function(e) {
+        if (e.target === self.overlay) self.close();
+      });
+      this.overlay.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modalclose') || e.target.closest('.modalclose')) {
+          e.preventDefault();
+          e.stopPropagation();
+          self.close();
+        }
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && self.isOpen) self.close();
+      });
+    },
+    open: function(modalType, data) {
+      if (!this.overlay || this.isOpen) return;
+      var typeConfig = this.modalTypes[modalType];
+      if (!typeConfig) return;
+      var content = this.container.querySelector('.' + typeConfig.contentClass);
+      if (!content) return;
+      this.currentModalType = modalType;
+      this.currentContent = content;
+      content.style.display = 'flex';
+      if (typeConfig.updateContent) {
+        typeConfig.updateContent.call(this, content, data);
+      }
+      this.scrollPosition = window.scrollY;
+      document.body.classList.add('no-scroll');
+      document.body.style.top = -this.scrollPosition + 'px';
+      this.overlay.style.display = 'flex';
+      void this.overlay.offsetWidth;
+      this.overlay.classList.add(this.config.activeClass);
+      this.isOpen = true;
+    },
+    close: function() {
+      if (!this.overlay || !this.isOpen) return;
+      var self = this;
+      var typeConfig = this.modalTypes[this.currentModalType];
+      if (typeConfig && typeConfig.onClose) {
+        typeConfig.onClose.call(this, this.currentContent);
+      }
+      this.overlay.classList.remove(this.config.activeClass);
+      setTimeout(function() {
+        self.overlay.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+        document.body.style.top = '';
+        window.scrollTo(0, self.scrollPosition);
+        self.isOpen = false;
+        if (typeConfig && typeConfig.afterClose) {
+          typeConfig.afterClose.call(self);
+        }
+        if (self.currentContent) {
+          self.currentContent.style.display = 'none';
+        }
+        self.currentModalType = null;
+        self.currentContent = null;
+      }, this.config.animationDuration);
+    },
+    isModalOpen: function() {
+      return this.isOpen;
+    }
+  };
+  
+  var modalReady = ModalSystem.init();
+
+  if (modalReady) {
+    ModalSystem.registerModalType('songlink', {
+      contentClass: 'modalcontentsonglink',
+      updateContent: function(content, data) {
+        var self = this;
+        var s = ModalSelectors.songlink;
+        var dynamicContent = content.querySelector(s.dynamicContent);
+        var loadingIndicator = self.container.querySelector(s.loadingIndicator);
+        var thumbnail = content.querySelector(s.thumbnail);
+        var titleElement = content.querySelector(s.title);
+        var spotifyContainer = content.querySelector(s.spotifyContainer);
+        var songlinkIframe = content.querySelector(s.songlinkIframe);
+        var songlinkIframeContainer = content.querySelector(s.songlinkIframeContainer);
+        var loadingState = {thumbnail: false, spotify: false, songlink: false, minimumTimeElapsed: false, timeout: false};
+        var loadingStartTime = Date.now();
+        if (dynamicContent) {
+          dynamicContent.style.visibility = 'visible';
+          dynamicContent.style.opacity = '1';
+        }
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'block';
+          loadingIndicator.style.opacity = '1';
+          loadingIndicator.style.visibility = 'visible';
+          loadingIndicator.style.zIndex = '999';
+        }
+        [thumbnail, titleElement, spotifyContainer, songlinkIframeContainer].forEach(function(el) {
+          if (el) {
+            el.style.opacity = '0';
+            el.style.visibility = 'hidden';
+          }
+        });
+        setTimeout(function() {
+          loadingState.minimumTimeElapsed = true;
+          checkAllReady();
+        }, Config.modalLoadingMinTime);
+        function checkAllReady() {
+          var isSpotify = data.songUrl && data.songUrl.includes('spotify.com');
+          var allReady = loadingState.minimumTimeElapsed && loadingState.songlink && (!isSpotify || (loadingState.thumbnail && loadingState.spotify));
+          if (allReady || loadingState.timeout) {
+            var elapsedTime = Date.now() - loadingStartTime;
+            var remainingTime = Math.max(0, Config.modalLoadingMinTime - elapsedTime);
+            setTimeout(function() {
+              if (loadingIndicator) {
+                loadingIndicator.style.transition = 'opacity 0.3s ease';
+                loadingIndicator.style.opacity = '0';
+                setTimeout(function() { loadingIndicator.style.display = 'none'; }, 300);
+              }
+              [thumbnail, titleElement, spotifyContainer].forEach(function(el) {
+                if (el && !el.style.display.includes('none')) {
+                  el.style.visibility = 'visible';
+                  el.style.transition = 'opacity 0.4s ease';
+                  el.style.opacity = '1';
+                }
+              });
+              if (songlinkIframeContainer) {
+                setTimeout(function() {
+                  songlinkIframeContainer.style.visibility = 'visible';
+                  songlinkIframeContainer.style.transition = 'opacity 0.6s ease';
+                  songlinkIframeContainer.style.opacity = '1';
+                }, Config.songlinkExtraDelay);
+              }
+            }, remainingTime);
+          }
+        }
+        setTimeout(function() {
+          loadingState.timeout = true;
+          checkAllReady();
+        }, Config.modalLoadingTimeout);
+        if (thumbnail) {
+          thumbnail.style.opacity = '0';
+          thumbnail.style.display = 'block';
+        }
+        if (titleElement) titleElement.style.opacity = '0';
+        if (spotifyContainer) {
+          spotifyContainer.style.opacity = '0';
+          spotifyContainer.style.display = 'block';
+        }
+        if (songlinkIframe) songlinkIframe.style.opacity = '0';
+        if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
+        if (songlinkIframe && data.songUrl) {
+          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(data.songUrl);
+          songlinkIframe.src = embedUrl;
+          songlinkIframe.onload = function() {
+            setTimeout(function() {
+              songlinkIframe.style.transition = 'opacity 0.4s ease';
+              songlinkIframe.style.opacity = '1';
+              if (songlinkIframeContainer) {
+                songlinkIframeContainer.style.transition = 'opacity 0.4s ease';
+                songlinkIframeContainer.style.opacity = '1';
+              }
+            }, 400);
+            loadingState.songlink = true;
+            checkAllReady();
+          };
+          setTimeout(function() {
+            if (!loadingState.songlink) {
+              loadingState.songlink = true;
+              songlinkIframe.style.opacity = '1';
+              if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '1';
+              checkAllReady();
+            }
+          }, Config.modalLoadingTimeout);
+        }
+        if (data.songUrl && data.songUrl.includes('spotify.com')) {
+          SpotifyHelper.fetchOEmbed(data.songUrl, function(error, oembedData) {
+            if (error || !oembedData) {
+              if (titleElement && data.songTitle) {
+                titleElement.textContent = data.songTitle;
+                setTimeout(function() {
+                  titleElement.style.transition = 'opacity 0.4s ease';
+                  titleElement.style.opacity = '1';
+                }, Config.contentFadeInDelay);
+              }
+              loadingState.thumbnail = true;
+              loadingState.spotify = true;
+              checkAllReady();
+              return;
+            }
+            if (thumbnail && oembedData.thumbnail_url) {
+              thumbnail.src = oembedData.thumbnail_url;
+              thumbnail.alt = oembedData.title || 'Album artwork';
+              thumbnail.onload = function() {
+                setTimeout(function() {
+                  thumbnail.style.transition = 'opacity 0.4s ease';
+                  thumbnail.style.opacity = '1';
+                }, Config.contentFadeInDelay);
+                loadingState.thumbnail = true;
+                checkAllReady();
+              };
+              thumbnail.onerror = function() {
+                thumbnail.style.display = 'none';
+                loadingState.thumbnail = true;
+                checkAllReady();
+              };
+            } else {
+              loadingState.thumbnail = true;
+            }
+            if (titleElement && oembedData.title) {
+              titleElement.textContent = oembedData.title;
+              setTimeout(function() {
+                titleElement.style.transition = 'opacity 0.4s ease';
+                titleElement.style.opacity = '1';
+              }, 150);
+            }
+            if (spotifyContainer && oembedData.iframe_url) {
+              spotifyContainer.innerHTML = '';
+              spotifyContainer.style.display = 'block';
+              var spotifyIframe = document.createElement('iframe');
+              spotifyIframe.src = oembedData.iframe_url;
+              spotifyIframe.style.width = '100%';
+              spotifyIframe.style.height = s.spotifyiframe_height + 'px';
+              spotifyIframe.style.border = 'none';
+              spotifyIframe.style.borderRadius = '12px';
+              spotifyIframe.setAttribute('frameborder', '0');
+              spotifyIframe.setAttribute('allowfullscreen', '');
+              spotifyIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+              spotifyIframe.setAttribute('loading', 'lazy');
+              spotifyIframe.onload = function() {
+                setTimeout(function() {
+                  spotifyContainer.style.transition = 'opacity 0.4s ease';
+                  spotifyContainer.style.opacity = '1';
+                }, 150);
+                loadingState.spotify = true;
+                checkAllReady();
+              };
+              var spotifyTimeout = DeviceHelper.isIOS() ? Config.spotifyTimeoutIOS : Config.spotifyTimeoutDesktop;
+              setTimeout(function() {
+                if (!loadingState.spotify) {
+                  if (DeviceHelper.isIOS()) {
+                    spotifyContainer.style.display = 'none';
+                  } else {
+                    spotifyContainer.style.opacity = '1';
+                  }
+                  loadingState.spotify = true;
+                  checkAllReady();
+                }
+              }, spotifyTimeout);
+              spotifyContainer.appendChild(spotifyIframe);
+            } else {
+              loadingState.spotify = true;
+            }
+          });
+        } else {
+          if (titleElement && data.songTitle) {
+            titleElement.textContent = data.songTitle;
+            setTimeout(function() {
+              titleElement.style.transition = 'opacity 0.4s ease';
+              titleElement.style.opacity = '1';
+            }, Config.contentFadeInDelay);
+          }
+          if (thumbnail) thumbnail.style.display = 'none';
+          if (spotifyContainer) spotifyContainer.style.display = 'none';
+          loadingState.thumbnail = true;
+          loadingState.spotify = true;
+        }
+      },
+      onClose: function(content) {},
+      afterClose: function() {
+        var content = this.container.querySelector('.modalcontent');
+        if (!content) return;
+        var s = ModalSelectors.songlink;
+        var songlinkIframe = content.querySelector(s.songlinkIframe);
+        var songlinkIframeContainer = content.querySelector(s.songlinkIframeContainer);
+        if (songlinkIframe) {
+          songlinkIframe.src = 'about:blank';
+          songlinkIframe.style.opacity = '0';
+          if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
+        }
+        var spotifyContainer = content.querySelector(s.spotifyContainer);
+        if (spotifyContainer) {
+          spotifyContainer.innerHTML = '';
+          spotifyContainer.style.opacity = '0';
+        }
+        var thumbnail = content.querySelector(s.thumbnail);
+        if (thumbnail) {
+          thumbnail.src = '';
+          thumbnail.style.opacity = '0';
+        }
+        var titleElement = content.querySelector(s.title);
+        if (titleElement) titleElement.style.opacity = '0';
+      }
+    });
+    document.querySelectorAll('[data-song-url]').forEach(function(button) {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        var songUrl = this.getAttribute('data-song-url');
+        var songTitle = this.getAttribute('data-song-title') || 'Golsie';
+        if (!songUrl) return;
+        ModalSystem.open('songlink', { songUrl: songUrl, songTitle: songTitle });
+      });
+    });
+  }
+
+  if (modalReady) {
+    ModalSystem.registerModalType('youtube', {
+      contentClass: 'modalcontentyoutubelink',
+      updateContent: function(content, data) {
+        var self = this;
+        var s = ModalSelectors.youtube;
+        var dynamicContent = content.querySelector(s.dynamicContent);
+        var loadingIndicator = self.container.querySelector(s.loadingIndicator);
+        var titleElement = content.querySelector(s.title);
+        var videoWrapper = content.querySelector(s.videoWrapper);
+        var youtubeIframe = content.querySelector(s.youtubeElement);
+        var loadingState = { videoReady: false, minimumTimeElapsed: false, timeout: false };
+        var loadingStartTime = Date.now();
+        if (dynamicContent) {
+          dynamicContent.style.visibility = 'visible';
+          dynamicContent.style.opacity = '1';
+        }
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'block';
+          loadingIndicator.style.opacity = '1';
+          loadingIndicator.style.visibility = 'visible';
+          loadingIndicator.style.zIndex = '999';
+        }
+        if (videoWrapper) {
+          videoWrapper.style.opacity = '0';
+          videoWrapper.style.visibility = 'hidden';
+        }
+        setTimeout(function() {
+          loadingState.minimumTimeElapsed = true;
+          checkReady();
+        }, Config.modalLoadingMinTime);
+        function checkReady() {
+          if ((loadingState.minimumTimeElapsed && loadingState.videoReady) || loadingState.timeout) {
+            var elapsedTime = Date.now() - loadingStartTime;
+            var remainingTime = Math.max(0, Config.modalLoadingMinTime - elapsedTime);
+            setTimeout(function() {
+              if (loadingIndicator) {
+                loadingIndicator.style.transition = 'opacity 0.3s ease';
+                loadingIndicator.style.opacity = '0';
+                setTimeout(function() { loadingIndicator.style.display = 'none'; }, 300);
+              }
+              if (videoWrapper) {
+                videoWrapper.style.visibility = 'visible';
+                videoWrapper.style.transition = 'opacity 0.5s ease';
+                videoWrapper.style.opacity = '1';
+              }
+            }, remainingTime);
+          }
+        }
+        setTimeout(function() {
+          loadingState.timeout = true;
+          checkReady();
+        }, Config.modalLoadingTimeout);
+        if (titleElement && data.videoTitle) titleElement.textContent = data.videoTitle;
+        if (youtubeIframe && data.videoUrl) {
+          var videoId = data.videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+          if (videoId && videoId[2].length === 11) {
+            youtubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
+            youtubeIframe.onload = function() {
+              loadingState.videoReady = true;
+              checkReady();
+            };
+            setTimeout(function() {
+              if (!loadingState.videoReady) {
+                loadingState.videoReady = true;
+                checkReady();
+              }
+            }, 3000);
+          }
+        }
+      },
+      onClose: function(content) {},
+      afterClose: function() {
+        var s = ModalSelectors.youtube;
+        var content = this.container.querySelector(s.contentClass);
+        if (!content) return;
+        var loadingIndicator = content.querySelector(s.loadingIndicator);
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'none';
+          loadingIndicator.style.opacity = '0';
+        }
+        var videoWrapper = content.querySelector(s.videoWrapper);
+        if (videoWrapper) {
+          videoWrapper.style.opacity = '0';
+          videoWrapper.style.visibility = 'hidden';
+        }
+        var youtubeIframe = content.querySelector(s.youtubeElement);
+        if (youtubeIframe) youtubeIframe.src = 'about:blank';
+        var titleElement = content.querySelector(s.title);
+        if (titleElement) titleElement.textContent = 'Watch Video';
+      }
+    });
+    document.querySelectorAll('[data-video-url]').forEach(function(button) {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        var videoUrl = this.getAttribute('data-video-url');
+        var videoTitle = this.getAttribute('data-video-title');
+        if (!videoTitle) {
+          var textElement = this.querySelector('.linkbuttonstext');
+          videoTitle = textElement ? textElement.textContent.trim() : 'Watch Video';
+        }
+        if (!videoUrl) return;
+        ModalSystem.open('youtube', { videoUrl: videoUrl, videoTitle: videoTitle });
+      });
+    });
+  }
+
+  window.GolsieModals = {
+    open: function(modalType, data) {
+      if (modalReady) ModalSystem.open(modalType, data);
+    },
+    close: function() {
+      if (modalReady) ModalSystem.close();
+    },
+    isOpen: function() {
+      return modalReady ? ModalSystem.isModalOpen() : false;
+    }
+  };
+  
+  window.GolsieMenu = {
+    open: function() {
+      if (!MenuSystem.state.menuOpen) MenuSystem.toggle();
+    },
+    close: function() {
+      if (MenuSystem.state.menuOpen) MenuSystem.toggle();
+    },
+    isOpen: function() {
+      return MenuSystem.state.menuOpen;
+    }
+  };
+  
+  window.GolsieGallery = {
+    goTo: function(index) {
+      if (GallerySystem.galleries[0]) {
+        GallerySystem.galleries[0].goToImage(index);
+      }
+    },
+    next: function() {
+      if (GallerySystem.galleries[0]) {
+        GallerySystem.galleries[0].next();
+      }
+    },
+    prev: function() {
+      if (GallerySystem.galleries[0]) {
+        GallerySystem.galleries[0].prev();
+      }
+    },
+    create: function(config) {
+      return GallerySystem.init(config);
+    }
+  };
+  
+  window.GolsieNav = {
+    update: function() {
+      NavigationHelper.updateActiveState();
+    }
+  };
+  
+  window.GolsieShows = {
+    refresh: function() {
+      ShowsSystem.fetchShows();
+    },
+    getShows: function() {
+      return ShowsSystem.state.shows;
+    }
+  };
+  
+  window.GolsieScriptLoaded = true;
+  document.body.classList.add('git-js');
+  console.log('[Golsie] ✓ GitHub script v1.0.0 loaded');
+
+});

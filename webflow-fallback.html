@@ -1,0 +1,70 @@
+<!--
+  Golsie Fallback Script
+  This code runs ONLY if GitHub CDN fails
+  Place in Webflow Footer (after loader)
+-->
+<script>
+window.GolsieFallback = function() {
+  
+  // Minimal core functionality for fallback
+  // This ensures basic site functionality even if CDN fails
+  
+  document.addEventListener("DOMContentLoaded", function() {
+    
+    // ===========================
+    // MOBILE MENU (Minimal)
+    // ===========================
+    
+    var hamburgers = document.querySelectorAll('.hamburgerwrapper');
+    var menuOpen = false;
+    
+    hamburgers.forEach(function(hamburger) {
+      hamburger.addEventListener('click', function() {
+        menuOpen = !menuOpen;
+        document.body.classList.toggle('no-scroll', menuOpen);
+        
+        var headers = document.querySelectorAll('.headersection');
+        headers.forEach(function(header) {
+          if (menuOpen) {
+            header.classList.add('header--white-border');
+          } else {
+            header.classList.remove('header--white-border');
+          }
+        });
+      });
+    });
+    
+    // ===========================
+    // NAVIGATION ACTIVE STATE (Minimal)
+    // ===========================
+    
+    var path = window.location.pathname;
+    var currentPage = path.split('/').filter(Boolean)[0] || 'home';
+    
+    document.querySelectorAll('[data-page]').forEach(function(link) {
+      var linkPage = link.getAttribute('data-page');
+      if (linkPage === currentPage || 
+          (currentPage === 'home' && linkPage === '')) {
+        link.classList.add('activepage');
+      }
+    });
+    
+    // ===========================
+    // BACKGROUND VIDEO (Minimal)
+    // ===========================
+    
+    var video = document.querySelector('.homepagebgvideo video');
+    if (video) {
+      setInterval(function() {
+        if (!document.hidden && video.paused) {
+          video.play().catch(function(){});
+        }
+      }, 30000);
+    }
+    
+    console.log('[Golsie] Fallback script active (basic functionality only)');
+    
+  });
+  
+};
+</script>
