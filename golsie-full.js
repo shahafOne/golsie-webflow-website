@@ -873,6 +873,11 @@ document.addEventListener("DOMContentLoaded", function() {
           });
           
           this.goTo(this.currentIndex, false);
+          var self = this;
+            setTimeout(function() {
+              self.container.classList.add('carousel-ready');
+            }, 50);
+            
           return true;
         },
         
