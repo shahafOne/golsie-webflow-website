@@ -24,7 +24,20 @@ document.addEventListener("DOMContentLoaded", function() {
     ],
     showsMaxDisplay: 100,
     showsLoadingMinTime: 500,
-    showsDefaultFilter: 'all'
+    showsDefaultFilter: 'all',
+
+    carouselAnimationDuration: 300,
+    carouselSelectors: {
+      section: '.musiccarouselsection',
+      container: '.carouselcontainer',
+      track: '.carouseltrack',
+      item: '.musicitem',
+      arrowLeft: '.arrowleft',
+      arrowRight: '.arrowright',
+      centerClass: 'item-center',
+      sideClass: 'item-side',
+      farClass: 'item-far'
+    }
   };
   
   var ModalSelectors = {
@@ -802,6 +815,274 @@ document.addEventListener("DOMContentLoaded", function() {
     ShowsSystem.init();
   }, Config.galleryComponentLoadDelay);
 
+  var CarouselSystem = {
+    carousel: null,
+    
+    createCarousel: function(customConfig) {
+      return {
+        config: customConfig || Config.carouselSelectors,
+        animationDuration: Config.carouselAnimationDuration,
+        track: null,
+        container: null,
+        items: [],
+        originalCount: 0,
+        currentIndex: 0,
+        isAnimating: false,
+        isMobile: window.innerWidth <= 768,
+        touchStartX: 0,
+        touchEndX: 0,
+        touchStartY: 0,
+        touchEndY: 0,
+        
+        init: function() {
+          this.track = document.querySelector(this.config.track);
+          this.container = document.querySelector(this.config.container);
+          
+          if (!this.track || !this.container) return false;
+          
+          var originalItems = Array.from(this.track.querySelectorAll(this.config.item));
+          if (originalItems.length === 0) return false;
+          
+          this.originalCount = originalItems.length;
+          
+          // Clone items for infinite loop
+          for (var i = 0; i < 2; i++) {
+            var clone = originalItems[i].cloneNode(true);
+            clone.classList.add('clone');
+            this.track.appendChild(clone);
+          }
+          
+          for (var i = originalItems.length - 1; i >= originalItems.length - 2; i--) {
+            var clone = originalItems[i].cloneNode(true);
+            clone.classList.add('clone');
+            this.track.insertBefore(clone, this.track.firstChild);
+          }
+          
+          this.items = Array.from(this.track.querySelectorAll(this.config.item));
+          this.currentIndex = 2;
+          
+          this.setupWheel();
+          this.setupArrows();
+          this.setupTouch();
+          this.setupClicks();
+          
+          var self = this;
+          window.addEventListener('resize', function() {
+            self.isMobile = window.innerWidth <= 768;
+            self.goTo(self.currentIndex, false);
+          });
+          
+          this.goTo(this.currentIndex, false);
+          return true;
+        },
+        
+        setupWheel: function() {
+          var self = this;
+          var section = document.querySelector(this.config.section);
+          if (!section) return;
+          
+          section.addEventListener('wheel', function(e) {
+            if (self.isMobile) return;
+            e.preventDefault();
+            if (self.isAnimating) return;
+            
+            if (e.deltaY > 0) {
+              self.next();
+            } else {
+              self.prev();
+            }
+          }, { passive: false });
+        },
+        
+        setupTouch: function() {
+          var self = this;
+          
+          this.container.addEventListener('touchstart', function(e) {
+            if (!self.isMobile) return;
+            self.touchStartX = e.changedTouches[0].screenX;
+            self.touchStartY = e.changedTouches[0].screenY;
+          }, { passive: true });
+          
+          this.container.addEventListener('touchend', function(e) {
+            if (!self.isMobile) return;
+            self.touchEndX = e.changedTouches[0].screenX;
+            self.touchEndY = e.changedTouches[0].screenY;
+            self.handleSwipe();
+          }, { passive: true });
+        },
+        
+        handleSwipe: function() {
+          var deltaX = this.touchEndX - this.touchStartX;
+          var deltaY = this.touchEndY - this.touchStartY;
+          var minSwipeDistance = 50;
+          
+          if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+            if (deltaX > 0) {
+              this.prev();
+            } else {
+              this.next();
+            }
+          }
+        },
+        
+        setupArrows: function() {
+          var self = this;
+          var left = document.querySelector(this.config.arrowLeft);
+          var right = document.querySelector(this.config.arrowRight);
+          
+          if (left) left.onclick = function() { self.prev(); };
+          if (right) right.onclick = function() { self.next(); };
+        },
+        
+        setupClicks: function() {
+          var self = this;
+          
+          this.items.forEach(function(item, itemIndex) {
+            item.onclick = function(e) {
+              if (itemIndex !== self.currentIndex) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var distance = itemIndex - self.currentIndex;
+                if (Math.abs(distance) === 1) {
+                  if (distance > 0) {
+                    self.next();
+                  } else {
+                    self.prev();
+                  }
+                } else {
+                  self.currentIndex = itemIndex;
+                  self.goTo(itemIndex, true);
+                  self.scheduleLoopCheck();
+                }
+                return;
+              }
+            };
+          });
+        },
+        
+        next: function() {
+          if (!this.isMobile && this.isAnimating) return;
+          
+          this.currentIndex++;
+          
+          if (this.currentIndex >= this.items.length) {
+            this.currentIndex = 2;
+          }
+          
+          this.goTo(this.currentIndex, true);
+          this.scheduleLoopCheck();
+        },
+        
+        prev: function() {
+          if (!this.isMobile && this.isAnimating) return;
+          
+          this.currentIndex--;
+          
+          if (this.currentIndex < 0) {
+            this.currentIndex = this.items.length - 3;
+          }
+          
+          this.goTo(this.currentIndex, true);
+          this.scheduleLoopCheck();
+        },
+        
+        goTo: function(index, animate) {
+          var self = this;
+          
+          if (index < 0 || index >= this.items.length) {
+            index = Math.max(0, Math.min(index, this.items.length - 1));
+          }
+          
+          this.currentIndex = index;
+          
+          var item = this.items[index];
+          if (!item) return;
+          
+          var itemLeft = item.offsetLeft;
+          var itemWidth = item.offsetWidth;
+          var itemCenter = itemLeft + (itemWidth / 2);
+          
+          var containerWidth = this.container.offsetWidth;
+          var containerCenter = containerWidth / 2;
+          
+          var offset = containerCenter - itemCenter;
+          
+          if (animate) {
+            this.isAnimating = true;
+            this.track.style.transition = 'transform ' + this.animationDuration + 'ms ease';
+            setTimeout(function() {
+              self.isAnimating = false;
+            }, this.animationDuration);
+          } else {
+            this.track.style.transition = 'none';
+          }
+          
+          this.track.style.transform = 'translateX(' + offset + 'px)';
+          this.updateStates();
+        },
+        
+        scheduleLoopCheck: function() {
+          var self = this;
+          
+          setTimeout(function() {
+            if (self.currentIndex >= self.originalCount + 2) {
+              self.track.style.transition = 'none';
+              self.currentIndex = 2;
+              self.goTo(self.currentIndex, false);
+              void self.track.offsetWidth;
+            }
+            
+            if (self.currentIndex < 2) {
+              self.track.style.transition = 'none';
+              self.currentIndex = self.originalCount + 1;
+              self.goTo(self.currentIndex, false);
+              void self.track.offsetWidth;
+            }
+          }, this.animationDuration + 20);
+        },
+        
+        updateStates: function() {
+          var self = this;
+          
+          this.items.forEach(function(item, i) {
+            var distance = Math.abs(i - self.currentIndex);
+            
+            item.classList.remove(self.config.centerClass, self.config.sideClass, self.config.farClass);
+            
+            if (distance === 0) {
+              item.classList.add(self.config.centerClass);
+              item.style.opacity = '1';
+            } else if (distance === 1) {
+              item.classList.add(self.config.sideClass);
+              item.style.opacity = '0.6';
+            } else if (distance === 2) {
+              item.classList.add(self.config.farClass);
+              item.style.opacity = '0.4';
+            } else {
+              item.style.opacity = '0.2';
+            }
+            
+            item.style.transition = 'opacity ' + self.animationDuration + 'ms ease';
+          });
+        }
+      };
+    },
+    
+    init: function(customConfig) {
+      var carousel = this.createCarousel(customConfig);
+      var initialized = carousel.init();
+      if (initialized) {
+        this.carousel = carousel;
+      }
+      return carousel;
+    }
+  };
+
+  setTimeout(function() {
+    CarouselSystem.init();
+  }, Config.galleryComponentLoadDelay);
+
   var SpotifyHelper = {
     fetchOEmbed: function(spotifyUrl, callback) {
       fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(spotifyUrl))
@@ -1318,6 +1599,24 @@ document.addEventListener("DOMContentLoaded", function() {
     },
     getShows: function() {
       return ShowsSystem.state.shows;
+    }
+  };
+
+  window.GolsieCarousel = {
+    next: function() {
+      if (CarouselSystem.carousel) {
+        CarouselSystem.carousel.next();
+      }
+    },
+    prev: function() {
+      if (CarouselSystem.carousel) {
+        CarouselSystem.carousel.prev();
+      }
+    },
+    goTo: function(index) {
+      if (CarouselSystem.carousel) {
+        CarouselSystem.carousel.goTo(index, true);
+      }
     }
   };
   
