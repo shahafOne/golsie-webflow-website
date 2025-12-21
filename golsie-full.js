@@ -1429,9 +1429,17 @@ document.addEventListener("DOMContentLoaded", function() {
         if (titleElement) titleElement.style.opacity = '0';
       }
     });
-    document.querySelectorAll('[data-song-url]').forEach(function(button) {
+     document.querySelectorAll('[data-song-url]').forEach(function(button) {
       button.addEventListener('click', function(e) {
         e.preventDefault();
+        
+        // Check if it's a custom modal type
+        var modalType = this.getAttribute('data-modal-type');
+        if (modalType && modalType !== 'songlink') {
+          // Let custom handler deal with it
+          return;
+        }
+        
         var songUrl = this.getAttribute('data-song-url');
         var songTitle = this.getAttribute('data-song-title') || 'Golsie';
         if (!songUrl) return;
