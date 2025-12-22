@@ -1562,6 +1562,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return modalReady ? ModalSystem.isModalOpen() : false;
     }
   };
+  window.ModalSystem = ModalSystem;
   
   window.GolsieMenu = {
     open: function() {
