@@ -1094,8 +1094,85 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   };
 
+  // Carousel Filter System
+  var CarouselFilterSystem = {
+    musicCarousel: null,
+    videosCarousel: null,
+    
+    init: function() {
+      var self = this;
+      var filterButtons = document.querySelectorAll('[data-carousel-filter]');
+      
+      if (filterButtons.length === 0) {
+        // No filters, just init music carousel normally
+        CarouselSystem.init();
+        return;
+      }
+      
+      // Initialize music carousel
+      var musicSection = document.querySelector('[data-carousel-type="music"]');
+      if (musicSection) {
+        this.musicCarousel = CarouselSystem.init();
+      }
+      
+      // Initialize videos carousel with custom config
+      var videosSection = document.querySelector('[data-carousel-type="video"]');
+      if (videosSection) {
+        this.videosCarousel = CarouselSystem.createCarousel({
+          section: '[data-carousel-type="videos"]',
+          container: '[data-carousel-type="videos"] .carouselcontainer',
+          track: '[data-carousel-type="videos"] .carouseltrack',
+          item: '[data-carousel-type="videos"] .musicitem',
+          arrowLeft: '[data-carousel-type="videos"] .arrowleft',
+          arrowRight: '[data-carousel-type="videos"] .arrowright',
+          centerClass: 'item-center',
+          sideClass: 'item-side',
+          farClass: 'item-far'
+        });
+        this.videosCarousel.init();
+      }
+      
+      // Setup filter button clicks
+      filterButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          var filterType = this.getAttribute('data-carousel-filter');
+          self.switchCarousel(filterType);
+        });
+      });
+      
+      // Set initial active state
+      this.switchCarousel('music');
+    },
+    
+    switchCarousel: function(type) {
+      var musicSection = document.querySelector('[data-carousel-type="music"]');
+      var videosSection = document.querySelector('[data-carousel-type="video"]');
+      var filterButtons = document.querySelectorAll('[data-carousel-filter]');
+      
+      // Update button states
+      filterButtons.forEach(function(button) {
+        var btnType = button.getAttribute('data-carousel-filter');
+        if (btnType === type) {
+          button.classList.add('activecarouselfilter');
+        } else {
+          button.classList.remove('activecarouselfilter');
+        }
+      });
+      
+      // Show/hide carousels
+      if (type === 'music') {
+        if (musicSection) musicSection.style.display = 'flex';
+        if (videosSection) videosSection.style.display = 'none';
+      } else if (type === 'videos') {
+        if (musicSection) musicSection.style.display = 'none';
+        if (videosSection) videosSection.style.display = 'flex';
+      }
+    }
+  };
+
   setTimeout(function() {
-    CarouselSystem.init();
+    CarouselFilterSystem.init();
   }, Config.galleryComponentLoadDelay);
 
   var SpotifyHelper = {
