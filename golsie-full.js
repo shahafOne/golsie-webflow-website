@@ -1119,12 +1119,12 @@ document.addEventListener("DOMContentLoaded", function() {
       var videosSection = document.querySelector('[data-carousel-type="video"]');
       if (videosSection) {
         this.videosCarousel = CarouselSystem.createCarousel({
-          section: '[data-carousel-type="videos"]',
-          container: '[data-carousel-type="videos"] .carouselcontainer',
-          track: '[data-carousel-type="videos"] .carouseltrack',
-          item: '[data-carousel-type="videos"] .musicitem',
-          arrowLeft: '[data-carousel-type="videos"] .arrowleft',
-          arrowRight: '[data-carousel-type="videos"] .arrowright',
+          section: '[data-carousel-type="video"]',
+          container: '[data-carousel-type="video"] .carouselcontainer',
+          track: '[data-carousel-type="video"] .carouseltrack',
+          item: '[data-carousel-type="video"] .musicitem',
+          arrowLeft: '[data-carousel-type="video"] .arrowleft',
+          arrowRight: '[data-carousel-type="video"] .arrowright',
           centerClass: 'item-center',
           sideClass: 'item-side',
           farClass: 'item-far'
