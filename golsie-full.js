@@ -1117,9 +1117,18 @@ document.addEventListener("DOMContentLoaded", function() {
       
       // Initialize music carousel
       if (musicSection) {
-        this.musicCarousel = CarouselSystem.createCarousel(Config.carouselSelectors);
+       this.musicCarousel = CarouselSystem.createCarousel({
+          section: '.musiccarouselsection',
+          container: '[data-carousel-type="music"]',
+          track: '[data-carousel-type="music"] .carouseltrack',
+          item: '[data-carousel-type="music"] .musicitem',
+          arrowLeft: '.arrowleft',
+          arrowRight: '.arrowright',
+          centerClass: 'item-center',
+          sideClass: 'item-side',
+          farClass: 'item-far'
+        });
         var musicInit = this.musicCarousel.init();
-        console.log('[Carousel] Music init:', musicInit);
       }
 
       // Initialize video carousel  
@@ -1160,6 +1169,7 @@ document.addEventListener("DOMContentLoaded", function() {
     },
     
     switchCarousel: function(type) {
+      var self = this;
       var musicSection = document.querySelector('[data-carousel-type="music"]');
       var videoSection = document.querySelector('[data-carousel-type="video"]');
       var filterButtons = document.querySelectorAll('[data-carousel-filter]');
@@ -1178,9 +1188,24 @@ document.addEventListener("DOMContentLoaded", function() {
       if (type === 'music') {
         if (musicSection) musicSection.style.display = 'flex';
         if (videoSection) videoSection.style.display = 'none';
+        
+        // Re-center music carousel
+        setTimeout(function() {
+          if (self.musicCarousel) {
+            self.musicCarousel.goTo(self.musicCarousel.currentIndex, false);
+          }
+        }, 50);
+        
       } else if (type === 'video') {
         if (musicSection) musicSection.style.display = 'none';
         if (videoSection) videoSection.style.display = 'flex';
+        
+        // Re-center video carousel
+        setTimeout(function() {
+          if (self.videoCarousel) {
+            self.videoCarousel.goTo(self.videoCarousel.currentIndex, false);
+          }
+        }, 50);
       }
     }
   };
