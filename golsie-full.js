@@ -1165,7 +1165,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (type === 'music') {
         if (musicSection) musicSection.style.display = 'flex';
         if (videosSection) videosSection.style.display = 'none';
-      } else if (type === 'videos') {
+      } else if (type === 'video') {
         if (musicSection) musicSection.style.display = 'none';
         if (videosSection) videosSection.style.display = 'flex';
       }
