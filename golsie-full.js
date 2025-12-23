@@ -1125,12 +1125,12 @@ document.addEventListener("DOMContentLoaded", function() {
       // Initialize video carousel  
       if (videoSection) {
         this.videoCarousel = CarouselSystem.createCarousel({
-          section: '[data-carousel-type="video"]',
-          container: '[data-carousel-type="video"] .carouselcontainer',
+          section: '.musiccarouselsection',
+          container: '[data-carousel-type="video"]',
           track: '[data-carousel-type="video"] .carouseltrack',
           item: '[data-carousel-type="video"] .musicitem',
-          arrowLeft: '[data-carousel-type="video"] .arrowleft',
-          arrowRight: '[data-carousel-type="video"] .arrowright',
+          arrowLeft: '.arrowleft',
+          arrowRight: '.arrowright',
           centerClass: 'item-center',
           sideClass: 'item-side',
           farClass: 'item-far'
