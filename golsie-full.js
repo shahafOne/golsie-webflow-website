@@ -1097,28 +1097,33 @@ document.addEventListener("DOMContentLoaded", function() {
   // Carousel Filter System
   var CarouselFilterSystem = {
     musicCarousel: null,
-    videosCarousel: null,
+    videoCarousel: null,
     
     init: function() {
       var self = this;
       var filterButtons = document.querySelectorAll('[data-carousel-filter]');
       
       if (filterButtons.length === 0) {
-        // No filters, just init music carousel normally
         CarouselSystem.init();
         return;
       }
       
-      // Initialize music carousel
+      // Show both carousels initially for proper initialization
       var musicSection = document.querySelector('[data-carousel-type="music"]');
+      var videoSection = document.querySelector('[data-carousel-type="video"]');
+      
+      if (musicSection) musicSection.style.display = 'flex';
+      if (videoSection) videoSection.style.display = 'flex';
+      
+      // Initialize music carousel with default config
       if (musicSection) {
-        this.musicCarousel = CarouselSystem.init();
+        this.musicCarousel = CarouselSystem.createCarousel(Config.carouselSelectors);
+        this.musicCarousel.init();
       }
       
-      // Initialize videos carousel with custom config
-      var videosSection = document.querySelector('[data-carousel-type="video"]');
-      if (videosSection) {
-        this.videosCarousel = CarouselSystem.createCarousel({
+      // Initialize video carousel with custom config
+      if (videoSection) {
+        this.videoCarousel = CarouselSystem.createCarousel({
           section: '[data-carousel-type="video"]',
           container: '[data-carousel-type="video"] .carouselcontainer',
           track: '[data-carousel-type="video"] .carouseltrack',
@@ -1129,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", function() {
           sideClass: 'item-side',
           farClass: 'item-far'
         });
-        this.videosCarousel.init();
+        this.videoCarousel.init();
       }
       
       // Setup filter button clicks
@@ -1141,14 +1146,15 @@ document.addEventListener("DOMContentLoaded", function() {
         });
       });
       
-      console.log("heyy");
-      // Set initial active state
-      this.switchCarousel('music');
+      // After both initialized, switch to music (hides video)
+      setTimeout(function() {
+        self.switchCarousel('music');
+      }, 100);
     },
     
     switchCarousel: function(type) {
       var musicSection = document.querySelector('[data-carousel-type="music"]');
-      var videosSection = document.querySelector('[data-carousel-type="video"]');
+      var videoSection = document.querySelector('[data-carousel-type="video"]');
       var filterButtons = document.querySelectorAll('[data-carousel-filter]');
       
       // Update button states
@@ -1164,10 +1170,10 @@ document.addEventListener("DOMContentLoaded", function() {
       // Show/hide carousels
       if (type === 'music') {
         if (musicSection) musicSection.style.display = 'flex';
-        if (videosSection) videosSection.style.display = 'none';
+        if (videoSection) videoSection.style.display = 'none';
       } else if (type === 'video') {
         if (musicSection) musicSection.style.display = 'none';
-        if (videosSection) videosSection.style.display = 'flex';
+        if (videoSection) videoSection.style.display = 'flex';
       }
     }
   };
