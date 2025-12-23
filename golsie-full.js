@@ -963,10 +963,11 @@ document.addEventListener("DOMContentLoaded", function() {
                   self.scheduleLoopCheck();
                 }
                 
-                // After centering, trigger modal if needed
+                // After centering, trigger modal on the NEW centered item (not the clone)
                 if (shouldOpenModal) {
                   setTimeout(function() {
-                    item.click();
+                    // Click the item that's NOW in center (after loop swap)
+                    self.items[self.currentIndex].click();
                   }, self.animationDuration + 50);
                 }
                 return;
