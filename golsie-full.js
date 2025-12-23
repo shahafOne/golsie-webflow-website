@@ -1159,12 +1159,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
       // Wait for both to fully initialize, THEN hide video
       setTimeout(function() {
-        // Re-center both carousels after init
-        if (self.musicCarousel) self.musicCarousel.goTo(self.musicCarousel.currentIndex, false);
-        if (self.videoCarousel) self.videoCarousel.goTo(self.videoCarousel.currentIndex, false);
+        if (self.musicCarousel) self.musicCarousel.goTo(2, false);
+        if (self.videoCarousel) self.videoCarousel.goTo(2, false);
         
-        // Now hide video
         self.switchCarousel('music');
+        self.setupSharedArrows('music'); // Attach arrows to music initially
       }, 200);
     },
     
@@ -1184,15 +1183,15 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       });
       
-      // Show/hide carousels
+      // Show/hide carousels and reset to first item
       if (type === 'music') {
         if (musicSection) musicSection.style.display = 'flex';
         if (videoSection) videoSection.style.display = 'none';
         
-        // Re-center music carousel
         setTimeout(function() {
           if (self.musicCarousel) {
-            self.musicCarousel.goTo(self.musicCarousel.currentIndex, false);
+            self.musicCarousel.currentIndex = 2; // Reset to first real item
+            self.musicCarousel.goTo(2, false);
           }
         }, 50);
         
@@ -1200,12 +1199,38 @@ document.addEventListener("DOMContentLoaded", function() {
         if (musicSection) musicSection.style.display = 'none';
         if (videoSection) videoSection.style.display = 'flex';
         
-        // Re-center video carousel
         setTimeout(function() {
           if (self.videoCarousel) {
-            self.videoCarousel.goTo(self.videoCarousel.currentIndex, false);
+            self.videoCarousel.currentIndex = 2; // Reset to first real item
+            self.videoCarousel.goTo(2, false);
           }
         }, 50);
+      }
+      
+      // Re-attach arrow handlers for active carousel
+      this.setupSharedArrows(type);
+    },
+
+    setupSharedArrows: function(activeType) {
+      var self = this;
+      var leftArrow = document.querySelector('.arrowleft');
+      var rightArrow = document.querySelector('.arrowright');
+      
+      if (!leftArrow || !rightArrow) return;
+      
+      // Remove old handlers by cloning
+      var newLeft = leftArrow.cloneNode(true);
+      var newRight = rightArrow.cloneNode(true);
+      leftArrow.parentNode.replaceChild(newLeft, leftArrow);
+      rightArrow.parentNode.replaceChild(newRight, rightArrow);
+      
+      // Attach new handlers for active carousel
+      if (activeType === 'music' && self.musicCarousel) {
+        newLeft.onclick = function() { self.musicCarousel.prev(); };
+        newRight.onclick = function() { self.musicCarousel.next(); };
+      } else if (activeType === 'video' && self.videoCarousel) {
+        newLeft.onclick = function() { self.videoCarousel.prev(); };
+        newRight.onclick = function() { self.videoCarousel.next(); };
       }
     }
   };
