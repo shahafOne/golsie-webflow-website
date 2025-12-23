@@ -949,6 +949,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 e.stopPropagation();
                 
                 var distance = itemIndex - self.currentIndex;
+                var shouldOpenModal = item.getAttribute('data-modal-type');
+                
                 if (Math.abs(distance) === 1) {
                   if (distance > 0) {
                     self.next();
@@ -959,6 +961,13 @@ document.addEventListener("DOMContentLoaded", function() {
                   self.currentIndex = itemIndex;
                   self.goTo(itemIndex, true);
                   self.scheduleLoopCheck();
+                }
+                
+                // After centering, trigger modal if needed
+                if (shouldOpenModal) {
+                  setTimeout(function() {
+                    item.click();
+                  }, self.animationDuration + 50);
                 }
                 return;
               }
@@ -1562,8 +1571,9 @@ document.addEventListener("DOMContentLoaded", function() {
       return modalReady ? ModalSystem.isModalOpen() : false;
     }
   };
-  window.ModalSystem = ModalSystem;
   
+  window.ModalSystem = ModalSystem;
+
   window.GolsieMenu = {
     open: function() {
       if (!MenuSystem.state.menuOpen) MenuSystem.toggle();
