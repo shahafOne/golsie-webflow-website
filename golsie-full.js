@@ -1141,6 +1141,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
       });
       
+      console.log("heyy");
       // Set initial active state
       this.switchCarousel('music');
     },
