@@ -1115,13 +1115,14 @@ document.addEventListener("DOMContentLoaded", function() {
       if (musicSection) musicSection.style.display = 'flex';
       if (videoSection) videoSection.style.display = 'flex';
       
-      // Initialize music carousel with default config
+      // Initialize music carousel
       if (musicSection) {
         this.musicCarousel = CarouselSystem.createCarousel(Config.carouselSelectors);
-        this.musicCarousel.init();
+        var musicInit = this.musicCarousel.init();
+        console.log('[Carousel] Music init:', musicInit);
       }
-      
-      // Initialize video carousel with custom config
+
+      // Initialize video carousel  
       if (videoSection) {
         this.videoCarousel = CarouselSystem.createCarousel({
           section: '[data-carousel-type="video"]',
@@ -1134,9 +1135,10 @@ document.addEventListener("DOMContentLoaded", function() {
           sideClass: 'item-side',
           farClass: 'item-far'
         });
-        this.videoCarousel.init();
+        var videoInit = this.videoCarousel.init();
+        console.log('[Carousel] Video init:', videoInit);
       }
-      
+
       // Setup filter button clicks
       filterButtons.forEach(function(button) {
         button.addEventListener('click', function(e) {
@@ -1145,11 +1147,16 @@ document.addEventListener("DOMContentLoaded", function() {
           self.switchCarousel(filterType);
         });
       });
-      
-      // After both initialized, switch to music (hides video)
+
+      // Wait for both to fully initialize, THEN hide video
       setTimeout(function() {
+        // Re-center both carousels after init
+        if (self.musicCarousel) self.musicCarousel.goTo(self.musicCarousel.currentIndex, false);
+        if (self.videoCarousel) self.videoCarousel.goTo(self.videoCarousel.currentIndex, false);
+        
+        // Now hide video
         self.switchCarousel('music');
-      }, 100);
+      }, 200);
     },
     
     switchCarousel: function(type) {
