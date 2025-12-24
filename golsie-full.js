@@ -5,11 +5,11 @@ document.addEventListener("DOMContentLoaded", function() {
     menuToModalCloseDelay: 300,
     modalAnimationDuration: 300,
     modalLoadingMinTime: 700,
-    modalLoadingTimeout: 1, //4000
+    modalLoadingTimeout: 1,
     contentFadeInDelay: 100,
     songlinkExtraDelay: 300,
-    spotifyTimeoutDesktop: 1, //4000
-    spotifyTimeoutIOS: 1, //1500
+    spotifyTimeoutDesktop: 1,
+    spotifyTimeoutIOS: 1,
     videoKeepAliveInterval: 90000,
     hashRemovalDelay: 400,
     galleryComponentLoadDelay: 500,
@@ -42,32 +42,17 @@ document.addEventListener("DOMContentLoaded", function() {
   
   // Iframe Refresh Helper
   var IframeRefreshHelper = {
-    createRefreshButton: function(playerType, onRefresh) {
-      var wrapper = document.createElement('div');
-      wrapper.className = 'iframe-error-state';
-      wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px 20px;background:rgba(0,0,0,0.3);border-radius:12px;min-height:150px;';
-      
-      var placeholder = document.createElement('div');
-      placeholder.className = 'iframe-placeholder';
-      placeholder.style.cssText = 'width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.5);text-align:center;padding:8px;line-height:1.3;font-weight:500;';
-      placeholder.innerHTML = this.getPlaceholderHTML(playerType);
-      
-      var message = document.createElement('div');
-      message.style.cssText = 'color:rgba(255,255,255,0.7);font-size:14px;text-align:center;';
-      message.textContent = 'Failed to load ' + playerType;
-      
+    createRefreshButton: function(onRefresh) {
       var button = document.createElement('button');
-      button.className = 'iframe-refresh-btn';
-      button.style.cssText = 'background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:10px 20px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s ease;';
-      button.innerHTML = this.getRefreshIcon() + '<span>Retry</span>';
+      button.className = 'iframe-refresh-icon';
+      button.style.cssText = 'background:transparent;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;width:30px;height:30px;opacity:0.6;transition:opacity 0.2s ease;';
+      button.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff;"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>';
       
       button.onmouseover = function() {
-        this.style.background = 'rgba(255,255,255,0.25)';
-        this.style.borderColor = 'rgba(255,255,255,0.5)';
+        this.style.opacity = '1';
       };
       button.onmouseout = function() {
-        this.style.background = 'rgba(255,255,255,0.15)';
-        this.style.borderColor = 'rgba(255,255,255,0.3)';
+        this.style.opacity = '0.6';
       };
       
       button.onclick = function(e) {
@@ -76,35 +61,19 @@ document.addEventListener("DOMContentLoaded", function() {
         if (onRefresh) onRefresh();
       };
       
-      wrapper.appendChild(placeholder);
-      wrapper.appendChild(message);
-      wrapper.appendChild(button);
-      
-      return wrapper;
+      return button;
     },
     
-    getPlaceholderHTML: function(playerType) {
-      var icons = {
-        'Spotify': '<div style="font-size:24px;margin-bottom:4px;">&#9834;</div><div>Spotify</div>',
-        'Songlink': '<div style="font-size:24px;margin-bottom:4px;">&#128279;</div><div>Multi-Platform</div>',
-        'YouTube': '<div style="font-size:24px;margin-bottom:4px;">&#9654;</div><div>YouTube</div>',
-        'Bandcamp': '<div style="font-size:24px;margin-bottom:4px;">&#127911;</div><div>Bandcamp</div>'
-      };
-      return icons[playerType] || '<div style="font-size:24px;margin-bottom:4px;">&#9834;</div><div>' + playerType + '</div>';
-    },
-    
-    getRefreshIcon: function() {
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>';
-    },
-    
-    showError: function(container, playerType, onRefresh) {
+    showError: function(container, onRefresh) {
       if (!container) return;
       container.innerHTML = '';
       container.style.display = 'flex';
+      container.style.alignItems = 'center';
+      container.style.justifyContent = 'center';
       container.style.opacity = '1';
       container.style.visibility = 'visible';
-      var errorState = this.createRefreshButton(playerType, onRefresh);
-      container.appendChild(errorState);
+      var refreshBtn = this.createRefreshButton(onRefresh);
+      container.appendChild(refreshBtn);
     }
   };
   
@@ -1480,7 +1449,7 @@ document.addEventListener("DOMContentLoaded", function() {
             loadingState.spotify = true;
             // Only show refresh if we have a valid URL
             if (oembedData && oembedData.iframe_url) {
-              IframeRefreshHelper.showError(spotifyContainer, 'Spotify', function() {
+              IframeRefreshHelper.showError(spotifyContainer, function() {
                 console.log('[Golsie] Retrying Spotify iframe...');
                 errorState.spotify = false;
                 loadingState.spotify = false;
@@ -1504,7 +1473,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 errorState.spotify = true;
                 // Only show refresh if we have a valid URL
                 if (oembedData && oembedData.iframe_url) {
-                  IframeRefreshHelper.showError(spotifyContainer, 'Spotify', function() {
+                  IframeRefreshHelper.showError(spotifyContainer, function() {
                     console.log('[Golsie] Retrying Spotify iframe after timeout...');
                     errorState.spotify = false;
                     loadingState.spotify = false;
@@ -1551,7 +1520,7 @@ document.addEventListener("DOMContentLoaded", function() {
             loadingState.songlink = true;
             // Only show refresh if we have a valid URL
             if (songlinkIframeContainer && songUrl) {
-              IframeRefreshHelper.showError(songlinkIframeContainer, 'Songlink', function() {
+              IframeRefreshHelper.showError(songlinkIframeContainer, function() {
                 console.log('[Golsie] Retrying Songlink iframe...');
                 errorState.songlink = false;
                 loadingState.songlink = false;
@@ -1569,7 +1538,7 @@ document.addEventListener("DOMContentLoaded", function() {
               errorState.songlink = true;
               // Only show refresh if we have a valid URL
               if (songlinkIframeContainer && songUrl) {
-                IframeRefreshHelper.showError(songlinkIframeContainer, 'Songlink', function() {
+                IframeRefreshHelper.showError(songlinkIframeContainer, function() {
                   console.log('[Golsie] Retrying Songlink iframe after timeout...');
                   errorState.songlink = false;
                   loadingState.songlink = false;
@@ -1787,7 +1756,7 @@ document.addEventListener("DOMContentLoaded", function() {
             loadingState.videoReady = true;
             // Only show refresh if we have some URL (even if invalid, user might want to retry)
             if (videoWrapper && videoUrl) {
-              IframeRefreshHelper.showError(videoWrapper, 'YouTube', function() {
+              IframeRefreshHelper.showError(videoWrapper, function() {
                 console.log('[Golsie] Retrying YouTube iframe...');
                 errorState.youtube = false;
                 loadingState.videoReady = false;
@@ -1814,7 +1783,7 @@ document.addEventListener("DOMContentLoaded", function() {
             loadingState.videoReady = true;
             // Only show refresh if we have a valid URL
             if (videoWrapper && videoUrl) {
-              IframeRefreshHelper.showError(videoWrapper, 'YouTube', function() {
+              IframeRefreshHelper.showError(videoWrapper, function() {
                 console.log('[Golsie] Retrying YouTube iframe...');
                 errorState.youtube = false;
                 loadingState.videoReady = false;
@@ -1833,7 +1802,7 @@ document.addEventListener("DOMContentLoaded", function() {
               loadingState.videoReady = true;
               // Only show refresh if we have a valid URL
               if (videoWrapper && videoUrl) {
-                IframeRefreshHelper.showError(videoWrapper, 'YouTube', function() {
+                IframeRefreshHelper.showError(videoWrapper, function() {
                   console.log('[Golsie] Retrying YouTube iframe after timeout...');
                   errorState.youtube = false;
                   loadingState.videoReady = false;
@@ -2016,6 +1985,6 @@ document.addEventListener("DOMContentLoaded", function() {
   
   window.GolsieScriptLoaded = true;
   document.body.classList.add('git-js');
-  console.log('[Golsie] âœ“ GitHub script v1.0.0 loaded');
+  console.log('[Golsie] GitHub script v1.0.0 loaded');
 
 });
