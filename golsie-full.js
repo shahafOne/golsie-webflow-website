@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
     contentFadeInDelay: 100,
     songlinkExtraDelay: 300,
     spotifyTimeoutDesktop: 3000,
-    spotifyTimeoutIOS: 1500,
+    spotifyTimeoutIOS: 2000,
     videoKeepAliveInterval: 90000,
     hashRemovalDelay: 400,
     galleryComponentLoadDelay: 500,
@@ -37,6 +37,73 @@ document.addEventListener("DOMContentLoaded", function() {
       centerClass: 'item-center',
       sideClass: 'item-side',
       farClass: 'item-far'
+    }
+  };
+  
+  // Iframe Refresh Helper
+  var IframeRefreshHelper = {
+    createRefreshButton: function(onRefresh) {
+      var button = document.createElement('button');
+      button.className = 'iframe-refresh-icon';
+      button.style.cssText = 'background:transparent;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;width:30px;height:30px;opacity:0.6;transition:opacity 0.2s ease;';
+      button.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff;"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>';
+      
+      button.onmouseover = function() {
+        this.style.opacity = '1';
+      };
+      button.onmouseout = function() {
+        this.style.opacity = '0.6';
+      };
+      
+      button.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Show loading indicator
+        button.style.opacity = '0.3';
+        button.style.pointerEvents = 'none';
+        if (onRefresh) onRefresh();
+      };
+      
+      return button;
+    },
+    
+    showError: function(container, iframe, onRefresh) {
+      if (!container) return;
+      
+      // Hide iframe instead of deleting it
+      if (iframe) {
+        iframe.style.display = 'none';
+      }
+      
+      // Remove any existing refresh button first
+      var existingBtn = container.querySelector('.iframe-refresh-icon');
+      if (existingBtn) {
+        existingBtn.remove();
+      }
+      
+      container.style.display = 'flex';
+      container.style.alignItems = 'center';
+      container.style.justifyContent = 'center';
+      container.style.opacity = '1';
+      container.style.visibility = 'visible';
+      
+      var refreshBtn = this.createRefreshButton(onRefresh);
+      container.appendChild(refreshBtn);
+    },
+    
+    hideError: function(container, iframe) {
+      if (!container) return;
+      
+      // Remove refresh button
+      var existingBtn = container.querySelector('.iframe-refresh-icon');
+      if (existingBtn) {
+        existingBtn.remove();
+      }
+      
+      // Show iframe again
+      if (iframe) {
+        iframe.style.display = 'block';
+      }
     }
   };
   
@@ -1371,8 +1438,167 @@ document.addEventListener("DOMContentLoaded", function() {
         var spotifyContainer = content.querySelector(s.spotifyContainer);
         var songlinkIframe = content.querySelector(s.songlinkIframe);
         var songlinkIframeContainer = content.querySelector(s.songlinkIframeContainer);
+        
         var loadingState = {thumbnail: false, spotify: false, songlink: false, minimumTimeElapsed: false, timeout: false};
+        var errorState = {spotify: false, songlink: false};
         var loadingStartTime = Date.now();
+        
+        // Helper functions for loading Spotify and Songlink
+        function loadSpotifyPlayer(oembedData) {
+          if (!spotifyContainer || !oembedData || !oembedData.iframe_url) {
+            loadingState.spotify = true;
+            return;
+          }
+          
+          // Check if iframe already exists (retry scenario)
+          var spotifyIframe = spotifyContainer.querySelector('iframe');
+          
+          if (!spotifyIframe) {
+            // First load - create new iframe
+            spotifyContainer.innerHTML = '';
+            spotifyContainer.style.display = 'block';
+            spotifyIframe = document.createElement('iframe');
+            spotifyIframe.style.width = '100%';
+            spotifyIframe.style.height = s.spotifyiframe_height + 'px';
+            spotifyIframe.style.border = 'none';
+            spotifyIframe.style.borderRadius = '12px';
+            spotifyIframe.setAttribute('frameborder', '0');
+            spotifyIframe.setAttribute('allowfullscreen', '');
+            spotifyIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+            spotifyIframe.setAttribute('loading', 'lazy');
+            spotifyContainer.appendChild(spotifyIframe);
+          } else {
+            // Retry or reopen - hide refresh button, show iframe
+            IframeRefreshHelper.hideError(spotifyContainer, spotifyIframe);
+            spotifyIframe.style.display = 'block';
+          }
+          
+          spotifyIframe.src = oembedData.iframe_url;
+          
+          spotifyIframe.onload = function() {
+            setTimeout(function() {
+              spotifyContainer.style.transition = 'opacity 0.4s ease';
+              spotifyContainer.style.opacity = '1';
+            }, 150);
+            loadingState.spotify = true;
+            errorState.spotify = false;
+            checkAllReady();
+          };
+          
+          spotifyIframe.onerror = function() {
+            console.warn('[Golsie] Spotify iframe failed to load');
+            errorState.spotify = true;
+            loadingState.spotify = true;
+            // Only show refresh if we have a valid URL
+            if (oembedData && oembedData.iframe_url) {
+              IframeRefreshHelper.showError(spotifyContainer, spotifyIframe, function() {
+                console.log('[Golsie] Retrying Spotify iframe...');
+                errorState.spotify = false;
+                loadingState.spotify = false;
+                loadSpotifyPlayer(oembedData);
+              });
+            } else {
+              spotifyContainer.style.display = 'none';
+            }
+            checkAllReady();
+          };
+          
+          var spotifyTimeout = DeviceHelper.isIOS() ? Config.spotifyTimeoutIOS : Config.spotifyTimeoutDesktop;
+          setTimeout(function() {
+            if (!loadingState.spotify && !errorState.spotify) {
+              if (DeviceHelper.isIOS()) {
+                console.warn('[Golsie] Spotify timeout on iOS - hiding player');
+                spotifyContainer.style.display = 'none';
+                loadingState.spotify = true;
+              } else {
+                console.warn('[Golsie] Spotify timeout - showing error');
+                errorState.spotify = true;
+                // Only show refresh if we have a valid URL
+                if (oembedData && oembedData.iframe_url) {
+                  IframeRefreshHelper.showError(spotifyContainer, spotifyIframe, function() {
+                    console.log('[Golsie] Retrying Spotify iframe after timeout...');
+                    errorState.spotify = false;
+                    loadingState.spotify = false;
+                    loadSpotifyPlayer(oembedData);
+                  });
+                } else {
+                  spotifyContainer.style.display = 'none';
+                }
+              }
+              loadingState.spotify = true;
+              checkAllReady();
+            }
+          }, spotifyTimeout);
+        }
+        
+        function loadSonglinkIframe(songUrl) {
+          if (!songlinkIframe || !songUrl) {
+            loadingState.songlink = true;
+            return;
+          }
+          
+          // Hide refresh button if exists, show iframe
+          IframeRefreshHelper.hideError(songlinkIframeContainer, songlinkIframe);
+          
+          // Make sure iframe is visible (in case it was hidden on close)
+          songlinkIframe.style.display = 'block';
+          
+          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl);
+          songlinkIframe.src = embedUrl;
+          
+          songlinkIframe.onload = function() {
+            setTimeout(function() {
+              songlinkIframe.style.transition = 'opacity 0.4s ease';
+              songlinkIframe.style.opacity = '1';
+              if (songlinkIframeContainer) {
+                songlinkIframeContainer.style.transition = 'opacity 0.4s ease';
+                songlinkIframeContainer.style.opacity = '1';
+              }
+            }, 400);
+            loadingState.songlink = true;
+            errorState.songlink = false;
+            checkAllReady();
+          };
+          
+          songlinkIframe.onerror = function() {
+            console.warn('[Golsie] Songlink iframe failed to load');
+            errorState.songlink = true;
+            loadingState.songlink = true;
+            // Only show refresh if we have a valid URL
+            if (songlinkIframeContainer && songUrl) {
+              IframeRefreshHelper.showError(songlinkIframeContainer, songlinkIframe, function() {
+                console.log('[Golsie] Retrying Songlink iframe...');
+                errorState.songlink = false;
+                loadingState.songlink = false;
+                loadSonglinkIframe(songUrl);
+              });
+            } else if (songlinkIframeContainer) {
+              songlinkIframeContainer.style.display = 'none';
+            }
+            checkAllReady();
+          };
+          
+          setTimeout(function() {
+            if (!loadingState.songlink && !errorState.songlink) {
+              console.warn('[Golsie] Songlink timeout - showing error');
+              errorState.songlink = true;
+              // Only show refresh if we have a valid URL
+              if (songlinkIframeContainer && songUrl) {
+                IframeRefreshHelper.showError(songlinkIframeContainer, songlinkIframe, function() {
+                  console.log('[Golsie] Retrying Songlink iframe after timeout...');
+                  errorState.songlink = false;
+                  loadingState.songlink = false;
+                  loadSonglinkIframe(songUrl);
+                });
+              } else if (songlinkIframeContainer) {
+                songlinkIframeContainer.style.display = 'none';
+              }
+              loadingState.songlink = true;
+              checkAllReady();
+            }
+          }, Config.modalLoadingTimeout);
+        }
+        
         if (dynamicContent) {
           dynamicContent.style.visibility = 'visible';
           dynamicContent.style.opacity = '1';
@@ -1389,10 +1615,12 @@ document.addEventListener("DOMContentLoaded", function() {
             el.style.visibility = 'hidden';
           }
         });
+        
         setTimeout(function() {
           loadingState.minimumTimeElapsed = true;
           checkAllReady();
         }, Config.modalLoadingMinTime);
+        
         function checkAllReady() {
           var isSpotify = data.songUrl && data.songUrl.includes('spotify.com');
           var allReady = loadingState.minimumTimeElapsed && loadingState.songlink && (!isSpotify || (loadingState.thumbnail && loadingState.spotify));
@@ -1406,13 +1634,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 setTimeout(function() { loadingIndicator.style.display = 'none'; }, 300);
               }
               [thumbnail, titleElement, spotifyContainer].forEach(function(el) {
-                if (el && !el.style.display.includes('none')) {
+                if (el && !el.style.display.includes('none') && !errorState.spotify) {
                   el.style.visibility = 'visible';
                   el.style.transition = 'opacity 0.4s ease';
                   el.style.opacity = '1';
                 }
               });
-              if (songlinkIframeContainer) {
+              if (songlinkIframeContainer && !errorState.songlink) {
                 setTimeout(function() {
                   songlinkIframeContainer.style.visibility = 'visible';
                   songlinkIframeContainer.style.transition = 'opacity 0.6s ease';
@@ -1422,10 +1650,12 @@ document.addEventListener("DOMContentLoaded", function() {
             }, remainingTime);
           }
         }
+        
         setTimeout(function() {
           loadingState.timeout = true;
           checkAllReady();
         }, Config.modalLoadingTimeout);
+        
         if (thumbnail) {
           thumbnail.style.opacity = '0';
           thumbnail.style.display = 'block';
@@ -1437,30 +1667,13 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         if (songlinkIframe) songlinkIframe.style.opacity = '0';
         if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
-        if (songlinkIframe && data.songUrl) {
-          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(data.songUrl);
-          songlinkIframe.src = embedUrl;
-          songlinkIframe.onload = function() {
-            setTimeout(function() {
-              songlinkIframe.style.transition = 'opacity 0.4s ease';
-              songlinkIframe.style.opacity = '1';
-              if (songlinkIframeContainer) {
-                songlinkIframeContainer.style.transition = 'opacity 0.4s ease';
-                songlinkIframeContainer.style.opacity = '1';
-              }
-            }, 400);
-            loadingState.songlink = true;
-            checkAllReady();
-          };
-          setTimeout(function() {
-            if (!loadingState.songlink) {
-              loadingState.songlink = true;
-              songlinkIframe.style.opacity = '1';
-              if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '1';
-              checkAllReady();
-            }
-          }, Config.modalLoadingTimeout);
+        
+        // Load Songlink iframe
+        if (data.songUrl) {
+          loadSonglinkIframe(data.songUrl);
         }
+        
+        // Load Spotify content if applicable
         if (data.songUrl && data.songUrl.includes('spotify.com')) {
           SpotifyHelper.fetchOEmbed(data.songUrl, function(error, oembedData) {
             if (error || !oembedData) {
@@ -1502,43 +1715,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 titleElement.style.opacity = '1';
               }, 150);
             }
-            if (spotifyContainer && oembedData.iframe_url) {
-              spotifyContainer.innerHTML = '';
-              spotifyContainer.style.display = 'block';
-              var spotifyIframe = document.createElement('iframe');
-              spotifyIframe.src = oembedData.iframe_url;
-              spotifyIframe.style.width = '100%';
-              spotifyIframe.style.height = s.spotifyiframe_height + 'px';
-              spotifyIframe.style.border = 'none';
-              spotifyIframe.style.borderRadius = '12px';
-              spotifyIframe.setAttribute('frameborder', '0');
-              spotifyIframe.setAttribute('allowfullscreen', '');
-              spotifyIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
-              spotifyIframe.setAttribute('loading', 'lazy');
-              spotifyIframe.onload = function() {
-                setTimeout(function() {
-                  spotifyContainer.style.transition = 'opacity 0.4s ease';
-                  spotifyContainer.style.opacity = '1';
-                }, 150);
-                loadingState.spotify = true;
-                checkAllReady();
-              };
-              var spotifyTimeout = DeviceHelper.isIOS() ? Config.spotifyTimeoutIOS : Config.spotifyTimeoutDesktop;
-              setTimeout(function() {
-                if (!loadingState.spotify) {
-                  if (DeviceHelper.isIOS()) {
-                    spotifyContainer.style.display = 'none';
-                  } else {
-                    spotifyContainer.style.opacity = '1';
-                  }
-                  loadingState.spotify = true;
-                  checkAllReady();
-                }
-              }, spotifyTimeout);
-              spotifyContainer.appendChild(spotifyIframe);
-            } else {
-              loadingState.spotify = true;
-            }
+            loadSpotifyPlayer(oembedData);
           });
         } else {
           if (titleElement && data.songTitle) {
@@ -1559,18 +1736,36 @@ document.addEventListener("DOMContentLoaded", function() {
         var content = this.container.querySelector('.modalcontent');
         if (!content) return;
         var s = ModalSelectors.songlink;
+        
+        // Reset Songlink iframe but don't delete it
         var songlinkIframe = content.querySelector(s.songlinkIframe);
         var songlinkIframeContainer = content.querySelector(s.songlinkIframeContainer);
         if (songlinkIframe) {
           songlinkIframe.src = 'about:blank';
           songlinkIframe.style.opacity = '0';
-          if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
+          songlinkIframe.style.display = 'none';
         }
+        if (songlinkIframeContainer) {
+          // Remove any refresh button
+          var refreshBtn = songlinkIframeContainer.querySelector('.iframe-refresh-icon');
+          if (refreshBtn) refreshBtn.remove();
+          songlinkIframeContainer.style.opacity = '0';
+        }
+        
+        // Reset Spotify iframe but don't delete it
         var spotifyContainer = content.querySelector(s.spotifyContainer);
         if (spotifyContainer) {
-          spotifyContainer.innerHTML = '';
+          var spotifyIframe = spotifyContainer.querySelector('iframe');
+          if (spotifyIframe) {
+            spotifyIframe.src = 'about:blank';
+            spotifyIframe.style.display = 'none';
+          }
+          // Remove any refresh button
+          var refreshBtn = spotifyContainer.querySelector('.iframe-refresh-icon');
+          if (refreshBtn) refreshBtn.remove();
           spotifyContainer.style.opacity = '0';
         }
+        
         var thumbnail = content.querySelector(s.thumbnail);
         if (thumbnail) {
           thumbnail.src = '';
@@ -1606,8 +1801,91 @@ document.addEventListener("DOMContentLoaded", function() {
         var titleElement = content.querySelector(s.title);
         var videoWrapper = content.querySelector(s.videoWrapper);
         var youtubeIframe = content.querySelector(s.youtubeElement);
+        
         var loadingState = { videoReady: false, minimumTimeElapsed: false, timeout: false };
+        var errorState = { youtube: false };
         var loadingStartTime = Date.now();
+        
+        // Helper function for loading YouTube iframe
+        function loadYouTubeIframe(videoUrl) {
+          if (!youtubeIframe || !videoUrl) {
+            loadingState.videoReady = true;
+            return;
+          }
+          
+          var videoId = videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+          if (!videoId || videoId[2].length !== 11) {
+            console.warn('[Golsie] Invalid YouTube URL');
+            errorState.youtube = true;
+            loadingState.videoReady = true;
+            // Only show refresh if we have some URL (even if invalid, user might want to retry)
+            if (videoWrapper && videoUrl) {
+              IframeRefreshHelper.showError(videoWrapper, youtubeIframe, function() {
+                console.log('[Golsie] Retrying YouTube iframe...');
+                errorState.youtube = false;
+                loadingState.videoReady = false;
+                loadYouTubeIframe(videoUrl);
+              });
+            } else if (videoWrapper) {
+              videoWrapper.style.display = 'none';
+            }
+            checkReady();
+            return;
+          }
+          
+          // Hide refresh button if exists, show iframe
+          IframeRefreshHelper.hideError(videoWrapper, youtubeIframe);
+          
+          // Make sure iframe is visible (in case it was hidden on close)
+          youtubeIframe.style.display = 'block';
+          
+          youtubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
+          
+          youtubeIframe.onload = function() {
+            loadingState.videoReady = true;
+            errorState.youtube = false;
+            checkReady();
+          };
+          
+          youtubeIframe.onerror = function() {
+            console.warn('[Golsie] YouTube iframe failed to load');
+            errorState.youtube = true;
+            loadingState.videoReady = true;
+            // Only show refresh if we have a valid URL
+            if (videoWrapper && videoUrl) {
+              IframeRefreshHelper.showError(videoWrapper, youtubeIframe, function() {
+                console.log('[Golsie] Retrying YouTube iframe...');
+                errorState.youtube = false;
+                loadingState.videoReady = false;
+                loadYouTubeIframe(videoUrl);
+              });
+            } else if (videoWrapper) {
+              videoWrapper.style.display = 'none';
+            }
+            checkReady();
+          };
+          
+          setTimeout(function() {
+            if (!loadingState.videoReady && !errorState.youtube) {
+              console.warn('[Golsie] YouTube timeout - showing error');
+              errorState.youtube = true;
+              loadingState.videoReady = true;
+              // Only show refresh if we have a valid URL
+              if (videoWrapper && videoUrl) {
+                IframeRefreshHelper.showError(videoWrapper, youtubeIframe, function() {
+                  console.log('[Golsie] Retrying YouTube iframe after timeout...');
+                  errorState.youtube = false;
+                  loadingState.videoReady = false;
+                  loadYouTubeIframe(videoUrl);
+                });
+              } else if (videoWrapper) {
+                videoWrapper.style.display = 'none';
+              }
+              checkReady();
+            }
+          }, 3000);
+        }
+        
         if (dynamicContent) {
           dynamicContent.style.visibility = 'visible';
           dynamicContent.style.opacity = '1';
@@ -1622,10 +1900,12 @@ document.addEventListener("DOMContentLoaded", function() {
           videoWrapper.style.opacity = '0';
           videoWrapper.style.visibility = 'hidden';
         }
+        
         setTimeout(function() {
           loadingState.minimumTimeElapsed = true;
           checkReady();
         }, Config.modalLoadingMinTime);
+        
         function checkReady() {
           if ((loadingState.minimumTimeElapsed && loadingState.videoReady) || loadingState.timeout) {
             var elapsedTime = Date.now() - loadingStartTime;
@@ -1636,7 +1916,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 loadingIndicator.style.opacity = '0';
                 setTimeout(function() { loadingIndicator.style.display = 'none'; }, 300);
               }
-              if (videoWrapper) {
+              if (videoWrapper && !errorState.youtube) {
                 videoWrapper.style.visibility = 'visible';
                 videoWrapper.style.transition = 'opacity 0.5s ease';
                 videoWrapper.style.opacity = '1';
@@ -1644,26 +1924,16 @@ document.addEventListener("DOMContentLoaded", function() {
             }, remainingTime);
           }
         }
+        
         setTimeout(function() {
           loadingState.timeout = true;
           checkReady();
         }, Config.modalLoadingTimeout);
+        
         if (titleElement && data.videoTitle) titleElement.textContent = data.videoTitle;
-        if (youtubeIframe && data.videoUrl) {
-          var videoId = data.videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-          if (videoId && videoId[2].length === 11) {
-            youtubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
-            youtubeIframe.onload = function() {
-              loadingState.videoReady = true;
-              checkReady();
-            };
-            setTimeout(function() {
-              if (!loadingState.videoReady) {
-                loadingState.videoReady = true;
-                checkReady();
-              }
-            }, 3000);
-          }
+        
+        if (data.videoUrl) {
+          loadYouTubeIframe(data.videoUrl);
         }
       },
       onClose: function(content) {},
@@ -1677,12 +1947,22 @@ document.addEventListener("DOMContentLoaded", function() {
           loadingIndicator.style.opacity = '0';
         }
         var videoWrapper = content.querySelector(s.videoWrapper);
+        var youtubeIframe = content.querySelector(s.youtubeElement);
+        
+        // Don't delete iframe! Just reset and hide it
+        if (youtubeIframe) {
+          youtubeIframe.src = 'about:blank';
+          youtubeIframe.style.display = 'none';
+        }
+        
+        // Remove any refresh button
         if (videoWrapper) {
+          var refreshBtn = videoWrapper.querySelector('.iframe-refresh-icon');
+          if (refreshBtn) refreshBtn.remove();
           videoWrapper.style.opacity = '0';
           videoWrapper.style.visibility = 'hidden';
         }
-        var youtubeIframe = content.querySelector(s.youtubeElement);
-        if (youtubeIframe) youtubeIframe.src = 'about:blank';
+        
         var titleElement = content.querySelector(s.title);
         if (titleElement) titleElement.textContent = 'Watch Video';
       }
@@ -1784,6 +2064,6 @@ document.addEventListener("DOMContentLoaded", function() {
   
   window.GolsieScriptLoaded = true;
   document.body.classList.add('git-js');
-  console.log('[Golsie] ✓ GitHub script v1.0.0 loaded');
+  console.log('[Golsie] GitHub script v1.0.0 loaded');
 
 });
