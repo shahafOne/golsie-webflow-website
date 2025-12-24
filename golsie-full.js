@@ -5,11 +5,11 @@ document.addEventListener("DOMContentLoaded", function() {
     menuToModalCloseDelay: 300,
     modalAnimationDuration: 300,
     modalLoadingMinTime: 700,
-    modalLoadingTimeout: 4000,
+    modalLoadingTimeout: 1, //4000
     contentFadeInDelay: 100,
     songlinkExtraDelay: 300,
-    spotifyTimeoutDesktop: 4000,
-    spotifyTimeoutIOS: 1500,
+    spotifyTimeoutDesktop: 1, //4000
+    spotifyTimeoutIOS: 1, //1500
     videoKeepAliveInterval: 90000,
     hashRemovalDelay: 400,
     galleryComponentLoadDelay: 500,
