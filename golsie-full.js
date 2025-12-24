@@ -5,11 +5,11 @@ document.addEventListener("DOMContentLoaded", function() {
     menuToModalCloseDelay: 300,
     modalAnimationDuration: 300,
     modalLoadingMinTime: 700,
-    modalLoadingTimeout: 2000,
+    modalLoadingTimeout: 3000,
     contentFadeInDelay: 100,
     songlinkExtraDelay: 300,
-    spotifyTimeoutDesktop: 2000,
-    spotifyTimeoutIOS: 1500,
+    spotifyTimeoutDesktop: 3000,
+    spotifyTimeoutIOS: 2000,
     videoKeepAliveInterval: 90000,
     hashRemovalDelay: 400,
     galleryComponentLoadDelay: 500,
@@ -67,16 +67,43 @@ document.addEventListener("DOMContentLoaded", function() {
       return button;
     },
     
-    showError: function(container, onRefresh) {
+    showError: function(container, iframe, onRefresh) {
       if (!container) return;
-      container.innerHTML = '';
+      
+      // Hide iframe instead of deleting it
+      if (iframe) {
+        iframe.style.display = 'none';
+      }
+      
+      // Remove any existing refresh button first
+      var existingBtn = container.querySelector('.iframe-refresh-icon');
+      if (existingBtn) {
+        existingBtn.remove();
+      }
+      
       container.style.display = 'flex';
       container.style.alignItems = 'center';
       container.style.justifyContent = 'center';
       container.style.opacity = '1';
       container.style.visibility = 'visible';
+      
       var refreshBtn = this.createRefreshButton(onRefresh);
       container.appendChild(refreshBtn);
+    },
+    
+    hideError: function(container, iframe) {
+      if (!container) return;
+      
+      // Remove refresh button
+      var existingBtn = container.querySelector('.iframe-refresh-icon');
+      if (existingBtn) {
+        existingBtn.remove();
+      }
+      
+      // Show iframe again
+      if (iframe) {
+        iframe.style.display = 'block';
+      }
     }
   };
   
@@ -1423,18 +1450,29 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
           }
           
-          spotifyContainer.innerHTML = '';
-          spotifyContainer.style.display = 'block';
-          var spotifyIframe = document.createElement('iframe');
+          // Check if iframe already exists (retry scenario)
+          var spotifyIframe = spotifyContainer.querySelector('iframe');
+          
+          if (!spotifyIframe) {
+            // First load - create new iframe
+            spotifyContainer.innerHTML = '';
+            spotifyContainer.style.display = 'block';
+            spotifyIframe = document.createElement('iframe');
+            spotifyIframe.style.width = '100%';
+            spotifyIframe.style.height = s.spotifyiframe_height + 'px';
+            spotifyIframe.style.border = 'none';
+            spotifyIframe.style.borderRadius = '12px';
+            spotifyIframe.setAttribute('frameborder', '0');
+            spotifyIframe.setAttribute('allowfullscreen', '');
+            spotifyIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+            spotifyIframe.setAttribute('loading', 'lazy');
+            spotifyContainer.appendChild(spotifyIframe);
+          } else {
+            // Retry - hide refresh button, show iframe
+            IframeRefreshHelper.hideError(spotifyContainer, spotifyIframe);
+          }
+          
           spotifyIframe.src = oembedData.iframe_url;
-          spotifyIframe.style.width = '100%';
-          spotifyIframe.style.height = s.spotifyiframe_height + 'px';
-          spotifyIframe.style.border = 'none';
-          spotifyIframe.style.borderRadius = '12px';
-          spotifyIframe.setAttribute('frameborder', '0');
-          spotifyIframe.setAttribute('allowfullscreen', '');
-          spotifyIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
-          spotifyIframe.setAttribute('loading', 'lazy');
           
           spotifyIframe.onload = function() {
             setTimeout(function() {
@@ -1452,7 +1490,7 @@ document.addEventListener("DOMContentLoaded", function() {
             loadingState.spotify = true;
             // Only show refresh if we have a valid URL
             if (oembedData && oembedData.iframe_url) {
-              IframeRefreshHelper.showError(spotifyContainer, function() {
+              IframeRefreshHelper.showError(spotifyContainer, spotifyIframe, function() {
                 console.log('[Golsie] Retrying Spotify iframe...');
                 errorState.spotify = false;
                 loadingState.spotify = false;
@@ -1476,7 +1514,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 errorState.spotify = true;
                 // Only show refresh if we have a valid URL
                 if (oembedData && oembedData.iframe_url) {
-                  IframeRefreshHelper.showError(spotifyContainer, function() {
+                  IframeRefreshHelper.showError(spotifyContainer, spotifyIframe, function() {
                     console.log('[Golsie] Retrying Spotify iframe after timeout...');
                     errorState.spotify = false;
                     loadingState.spotify = false;
@@ -1490,37 +1528,24 @@ document.addEventListener("DOMContentLoaded", function() {
               checkAllReady();
             }
           }, spotifyTimeout);
-          
-          spotifyContainer.appendChild(spotifyIframe);
         }
         
         function loadSonglinkIframe(songUrl) {
-          if (!songlinkIframeContainer || !songUrl) {
+          if (!songlinkIframe || !songUrl) {
             loadingState.songlink = true;
             return;
           }
           
-          // Clear container and recreate iframe
-          songlinkIframeContainer.innerHTML = '';
-          songlinkIframeContainer.style.display = 'block';
-          
-          // Create new iframe element
-          var newSonglinkIframe = document.createElement('iframe');
-          newSonglinkIframe.style.width = '100%';
-          newSonglinkIframe.style.height = '100%';
-          newSonglinkIframe.style.border = 'none';
-          newSonglinkIframe.style.borderRadius = '12px';
-          newSonglinkIframe.setAttribute('frameborder', '0');
-          newSonglinkIframe.setAttribute('allowfullscreen', '');
-          newSonglinkIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+          // Hide refresh button if exists, show iframe
+          IframeRefreshHelper.hideError(songlinkIframeContainer, songlinkIframe);
           
           var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl);
-          newSonglinkIframe.src = embedUrl;
+          songlinkIframe.src = embedUrl;
           
-          newSonglinkIframe.onload = function() {
+          songlinkIframe.onload = function() {
             setTimeout(function() {
-              newSonglinkIframe.style.transition = 'opacity 0.4s ease';
-              newSonglinkIframe.style.opacity = '1';
+              songlinkIframe.style.transition = 'opacity 0.4s ease';
+              songlinkIframe.style.opacity = '1';
               if (songlinkIframeContainer) {
                 songlinkIframeContainer.style.transition = 'opacity 0.4s ease';
                 songlinkIframeContainer.style.opacity = '1';
@@ -1531,13 +1556,13 @@ document.addEventListener("DOMContentLoaded", function() {
             checkAllReady();
           };
           
-          newSonglinkIframe.onerror = function() {
+          songlinkIframe.onerror = function() {
             console.warn('[Golsie] Songlink iframe failed to load');
             errorState.songlink = true;
             loadingState.songlink = true;
             // Only show refresh if we have a valid URL
             if (songlinkIframeContainer && songUrl) {
-              IframeRefreshHelper.showError(songlinkIframeContainer, function() {
+              IframeRefreshHelper.showError(songlinkIframeContainer, songlinkIframe, function() {
                 console.log('[Golsie] Retrying Songlink iframe...');
                 errorState.songlink = false;
                 loadingState.songlink = false;
@@ -1555,7 +1580,7 @@ document.addEventListener("DOMContentLoaded", function() {
               errorState.songlink = true;
               // Only show refresh if we have a valid URL
               if (songlinkIframeContainer && songUrl) {
-                IframeRefreshHelper.showError(songlinkIframeContainer, function() {
+                IframeRefreshHelper.showError(songlinkIframeContainer, songlinkIframe, function() {
                   console.log('[Golsie] Retrying Songlink iframe after timeout...');
                   errorState.songlink = false;
                   loadingState.songlink = false;
@@ -1568,9 +1593,6 @@ document.addEventListener("DOMContentLoaded", function() {
               checkAllReady();
             }
           }, Config.modalLoadingTimeout);
-          
-          // Add iframe to container
-          songlinkIframeContainer.appendChild(newSonglinkIframe);
         }
         
         if (dynamicContent) {
@@ -1764,7 +1786,7 @@ document.addEventListener("DOMContentLoaded", function() {
         
         // Helper function for loading YouTube iframe
         function loadYouTubeIframe(videoUrl) {
-          if (!videoWrapper || !videoUrl) {
+          if (!youtubeIframe || !videoUrl) {
             loadingState.videoReady = true;
             return;
           }
@@ -1776,7 +1798,7 @@ document.addEventListener("DOMContentLoaded", function() {
             loadingState.videoReady = true;
             // Only show refresh if we have some URL (even if invalid, user might want to retry)
             if (videoWrapper && videoUrl) {
-              IframeRefreshHelper.showError(videoWrapper, function() {
+              IframeRefreshHelper.showError(videoWrapper, youtubeIframe, function() {
                 console.log('[Golsie] Retrying YouTube iframe...');
                 errorState.youtube = false;
                 loadingState.videoReady = false;
@@ -1789,35 +1811,24 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
           }
           
-          // Clear wrapper and recreate iframe
-          videoWrapper.innerHTML = '';
-          videoWrapper.style.display = 'block';
+          // Hide refresh button if exists, show iframe
+          IframeRefreshHelper.hideError(videoWrapper, youtubeIframe);
           
-          // Create new iframe element
-          var newYoutubeIframe = document.createElement('iframe');
-          newYoutubeIframe.style.width = '100%';
-          newYoutubeIframe.style.height = '100%';
-          newYoutubeIframe.style.border = 'none';
-          newYoutubeIframe.style.borderRadius = '12px';
-          newYoutubeIframe.setAttribute('frameborder', '0');
-          newYoutubeIframe.setAttribute('allowfullscreen', '');
-          newYoutubeIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+          youtubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
           
-          newYoutubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
-          
-          newYoutubeIframe.onload = function() {
+          youtubeIframe.onload = function() {
             loadingState.videoReady = true;
             errorState.youtube = false;
             checkReady();
           };
           
-          newYoutubeIframe.onerror = function() {
+          youtubeIframe.onerror = function() {
             console.warn('[Golsie] YouTube iframe failed to load');
             errorState.youtube = true;
             loadingState.videoReady = true;
             // Only show refresh if we have a valid URL
             if (videoWrapper && videoUrl) {
-              IframeRefreshHelper.showError(videoWrapper, function() {
+              IframeRefreshHelper.showError(videoWrapper, youtubeIframe, function() {
                 console.log('[Golsie] Retrying YouTube iframe...');
                 errorState.youtube = false;
                 loadingState.videoReady = false;
@@ -1836,7 +1847,7 @@ document.addEventListener("DOMContentLoaded", function() {
               loadingState.videoReady = true;
               // Only show refresh if we have a valid URL
               if (videoWrapper && videoUrl) {
-                IframeRefreshHelper.showError(videoWrapper, function() {
+                IframeRefreshHelper.showError(videoWrapper, youtubeIframe, function() {
                   console.log('[Golsie] Retrying YouTube iframe after timeout...');
                   errorState.youtube = false;
                   loadingState.videoReady = false;
@@ -1848,9 +1859,6 @@ document.addEventListener("DOMContentLoaded", function() {
               checkReady();
             }
           }, 3000);
-          
-          // Add iframe to wrapper
-          videoWrapper.appendChild(newYoutubeIframe);
         }
         
         if (dynamicContent) {
