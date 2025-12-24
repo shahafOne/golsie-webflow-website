@@ -5,11 +5,11 @@ document.addEventListener("DOMContentLoaded", function() {
     menuToModalCloseDelay: 300,
     modalAnimationDuration: 300,
     modalLoadingMinTime: 700,
-    modalLoadingTimeout: 3000,
+    modalLoadingTimeout: 2000,
     contentFadeInDelay: 100,
     songlinkExtraDelay: 300,
-    spotifyTimeoutDesktop: 3000,
-    spotifyTimeoutIOS: 2000,
+    spotifyTimeoutDesktop: 2000,
+    spotifyTimeoutIOS: 1500,
     videoKeepAliveInterval: 90000,
     hashRemovalDelay: 400,
     galleryComponentLoadDelay: 500,
@@ -58,6 +58,9 @@ document.addEventListener("DOMContentLoaded", function() {
       button.onclick = function(e) {
         e.preventDefault();
         e.stopPropagation();
+        // Show loading indicator
+        button.style.opacity = '0.3';
+        button.style.pointerEvents = 'none';
         if (onRefresh) onRefresh();
       };
       
@@ -1492,18 +1495,32 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         
         function loadSonglinkIframe(songUrl) {
-          if (!songlinkIframe || !songUrl) {
+          if (!songlinkIframeContainer || !songUrl) {
             loadingState.songlink = true;
             return;
           }
           
-          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl);
-          songlinkIframe.src = embedUrl;
+          // Clear container and recreate iframe
+          songlinkIframeContainer.innerHTML = '';
+          songlinkIframeContainer.style.display = 'block';
           
-          songlinkIframe.onload = function() {
+          // Create new iframe element
+          var newSonglinkIframe = document.createElement('iframe');
+          newSonglinkIframe.style.width = '100%';
+          newSonglinkIframe.style.height = '100%';
+          newSonglinkIframe.style.border = 'none';
+          newSonglinkIframe.style.borderRadius = '12px';
+          newSonglinkIframe.setAttribute('frameborder', '0');
+          newSonglinkIframe.setAttribute('allowfullscreen', '');
+          newSonglinkIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+          
+          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl);
+          newSonglinkIframe.src = embedUrl;
+          
+          newSonglinkIframe.onload = function() {
             setTimeout(function() {
-              songlinkIframe.style.transition = 'opacity 0.4s ease';
-              songlinkIframe.style.opacity = '1';
+              newSonglinkIframe.style.transition = 'opacity 0.4s ease';
+              newSonglinkIframe.style.opacity = '1';
               if (songlinkIframeContainer) {
                 songlinkIframeContainer.style.transition = 'opacity 0.4s ease';
                 songlinkIframeContainer.style.opacity = '1';
@@ -1514,7 +1531,7 @@ document.addEventListener("DOMContentLoaded", function() {
             checkAllReady();
           };
           
-          songlinkIframe.onerror = function() {
+          newSonglinkIframe.onerror = function() {
             console.warn('[Golsie] Songlink iframe failed to load');
             errorState.songlink = true;
             loadingState.songlink = true;
@@ -1551,6 +1568,9 @@ document.addEventListener("DOMContentLoaded", function() {
               checkAllReady();
             }
           }, Config.modalLoadingTimeout);
+          
+          // Add iframe to container
+          songlinkIframeContainer.appendChild(newSonglinkIframe);
         }
         
         if (dynamicContent) {
@@ -1744,7 +1764,7 @@ document.addEventListener("DOMContentLoaded", function() {
         
         // Helper function for loading YouTube iframe
         function loadYouTubeIframe(videoUrl) {
-          if (!youtubeIframe || !videoUrl) {
+          if (!videoWrapper || !videoUrl) {
             loadingState.videoReady = true;
             return;
           }
@@ -1769,15 +1789,29 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
           }
           
-          youtubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
+          // Clear wrapper and recreate iframe
+          videoWrapper.innerHTML = '';
+          videoWrapper.style.display = 'block';
           
-          youtubeIframe.onload = function() {
+          // Create new iframe element
+          var newYoutubeIframe = document.createElement('iframe');
+          newYoutubeIframe.style.width = '100%';
+          newYoutubeIframe.style.height = '100%';
+          newYoutubeIframe.style.border = 'none';
+          newYoutubeIframe.style.borderRadius = '12px';
+          newYoutubeIframe.setAttribute('frameborder', '0');
+          newYoutubeIframe.setAttribute('allowfullscreen', '');
+          newYoutubeIframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+          
+          newYoutubeIframe.src = 'https://www.youtube.com/embed/' + videoId[2] + '?autoplay=0&rel=0';
+          
+          newYoutubeIframe.onload = function() {
             loadingState.videoReady = true;
             errorState.youtube = false;
             checkReady();
           };
           
-          youtubeIframe.onerror = function() {
+          newYoutubeIframe.onerror = function() {
             console.warn('[Golsie] YouTube iframe failed to load');
             errorState.youtube = true;
             loadingState.videoReady = true;
@@ -1814,6 +1848,9 @@ document.addEventListener("DOMContentLoaded", function() {
               checkReady();
             }
           }, 3000);
+          
+          // Add iframe to wrapper
+          videoWrapper.appendChild(newYoutubeIframe);
         }
         
         if (dynamicContent) {
