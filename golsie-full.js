@@ -125,6 +125,12 @@ document.addEventListener("DOMContentLoaded", function() {
       loadingIndicator: '.modalloading',
       videoWrapper: '.modalyoutubewrapper',
       youtubeElement: '.modalyoutubewrapper iframe'
+    },
+    custom: {
+      contentClass: '.modalcontentcustom',
+      dynamicContent: '.modalcontentcustom .modaldynamiccontentcustom',
+      title: '.modalcontentcustom .modaltitletext',
+      loadingIndicator: '.modalloading'
     }
   };
 
@@ -1978,6 +1984,128 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         if (!videoUrl) return;
         ModalSystem.open('youtube', { videoUrl: videoUrl, videoTitle: videoTitle });
+      });
+    });
+  }
+  
+  // Custom Content Modal
+  if (modalReady) {
+    ModalSystem.registerModalType('custom', {
+      contentClass: 'modalcontentcustom',
+      updateContent: function(content, data) {
+        var s = ModalSelectors.custom;
+        var dynamicContent = content.querySelector(s.dynamicContent);
+        var titleElement = content.querySelector(s.title);
+        var loadingIndicator = this.container.querySelector(s.loadingIndicator);
+        
+        if (!dynamicContent) {
+          console.error('[Golsie] Custom modal: dynamic content container not found');
+          return;
+        }
+        
+        // Show loading initially
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'block';
+          loadingIndicator.style.opacity = '1';
+          loadingIndicator.style.visibility = 'visible';
+        }
+        
+        // Hide dynamic content initially
+        dynamicContent.style.opacity = '0';
+        dynamicContent.style.visibility = 'hidden';
+        
+        // Set title if provided
+        if (titleElement && data.title) {
+          titleElement.textContent = data.title;
+        }
+        
+        // Find source element by selector
+        var sourceSelector = data.sourceSelector || (data.sourceClass ? '.' + data.sourceClass : null);
+        if (!sourceSelector) {
+          console.error('[Golsie] Custom modal: no sourceSelector or sourceClass provided');
+          if (loadingIndicator) loadingIndicator.style.display = 'none';
+          return;
+        }
+        
+        var sourceElement = document.querySelector(sourceSelector);
+        if (!sourceElement) {
+          console.error('[Golsie] Custom modal: source element not found:', sourceSelector);
+          if (loadingIndicator) loadingIndicator.style.display = 'none';
+          return;
+        }
+        
+        // Clone the content
+        var clonedContent = sourceElement.cloneNode(true);
+        
+        // Make it visible (in case source was hidden)
+        clonedContent.style.display = 'block';
+        clonedContent.style.opacity = '1';
+        clonedContent.style.visibility = 'visible';
+        
+        // Clear and insert into modal
+        dynamicContent.innerHTML = '';
+        dynamicContent.appendChild(clonedContent);
+        
+        // Show content with fade in
+        setTimeout(function() {
+          if (loadingIndicator) {
+            loadingIndicator.style.transition = 'opacity 0.3s ease';
+            loadingIndicator.style.opacity = '0';
+            setTimeout(function() { 
+              loadingIndicator.style.display = 'none'; 
+            }, 300);
+          }
+          
+          dynamicContent.style.visibility = 'visible';
+          dynamicContent.style.transition = 'opacity 0.4s ease';
+          dynamicContent.style.opacity = '1';
+        }, 100);
+      },
+      onClose: function(content) {
+        // Optional: add any close logic here
+      },
+      afterClose: function() {
+        var s = ModalSelectors.custom;
+        var content = this.container.querySelector(s.contentClass);
+        if (!content) return;
+        
+        var dynamicContent = content.querySelector(s.dynamicContent);
+        if (dynamicContent) {
+          dynamicContent.innerHTML = '';
+          dynamicContent.style.opacity = '0';
+          dynamicContent.style.visibility = 'hidden';
+        }
+        
+        var titleElement = content.querySelector(s.title);
+        if (titleElement) {
+          titleElement.textContent = '';
+        }
+        
+        var loadingIndicator = content.querySelector(s.loadingIndicator);
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'none';
+          loadingIndicator.style.opacity = '0';
+        }
+      }
+    });
+    
+    // Setup event listeners for custom modal triggers
+    document.querySelectorAll('[data-custom-modal]').forEach(function(button) {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        var sourceSelector = this.getAttribute('data-custom-modal');
+        var modalTitle = this.getAttribute('data-modal-title');
+        
+        if (!sourceSelector) {
+          console.error('[Golsie] Custom modal button missing data-custom-modal attribute');
+          return;
+        }
+        
+        ModalSystem.open('custom', { 
+          sourceSelector: sourceSelector,
+          title: modalTitle || ''
+        });
       });
     });
   }
