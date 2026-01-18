@@ -2084,13 +2084,6 @@ document.addEventListener("DOMContentLoaded", function() {
             btn.removeAttribute('disabled');
           });
           
-          // FIX: Remove disabled attribute from submit buttons after moving
-          setTimeout(function() {
-            var submitButtons = dynamicContent.querySelectorAll('input[type="submit"], button[type="submit"]');
-            submitButtons.forEach(function(btn) {
-              btn.removeAttribute('disabled');
-            });
-  
           // Add HTML5 validation listeners to re-enable proper button behavior
           var forms = dynamicContent.querySelectorAll('form');
           forms.forEach(function(form) {
