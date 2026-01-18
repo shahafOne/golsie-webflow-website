@@ -2034,46 +2034,47 @@ document.addEventListener("DOMContentLoaded", function() {
           return;
         }
         
-        // Clone the content
-        var clonedContent = sourceElement.cloneNode(true);
-        
-        // Make it visible (in case source was hidden)
-        clonedContent.style.display = 'block';
-        clonedContent.style.opacity = '1';
-        clonedContent.style.visibility = 'visible';
-        
-        // Fix Webflow form conflicts: Remove all IDs from cloned content
-        // This prevents duplicate ID issues with Webflow forms
-        var elementsWithId = clonedContent.querySelectorAll('[id]');
-        elementsWithId.forEach(function(el) {
-          el.removeAttribute('id');
-        });
-        
-        // Also remove ID from the cloned content itself if it has one
-        if (clonedContent.id) {
-          clonedContent.removeAttribute('id');
+        // Store reference to source container for moving back on close
+        var sourceContainer = sourceElement;
+        var contentToMove;
+
+        // Determine what to move:
+        // If source element itself is the content (has children), move its children
+        // Otherwise, move the source element itself
+        if (sourceElement.children.length > 0) {
+          // Move all children from source to a document fragment first
+          contentToMove = document.createDocumentFragment();
+          while (sourceElement.firstChild) {
+            contentToMove.appendChild(sourceElement.firstChild);
+          }
+        } else {
+          // Source element itself is the content
+          contentToMove = sourceElement;
+          sourceContainer = sourceElement.parentElement;
         }
-        
-        // Remove 'disabled' attribute from all form elements
-        // Webflow adds this for validation, but loses track after ID removal
-        var disabledElements = clonedContent.querySelectorAll('[disabled]');
-        disabledElements.forEach(function(el) {
-          el.removeAttribute('disabled');
-        });
-        
-        // Clear and insert into modal
+
+        // Store source container reference on the modal content for retrieval on close
+        dynamicContent.setAttribute('data-source-selector', sourceSelector);
+
+        // Make content visible (in case source was hidden)
+        if (contentToMove.style) {
+          contentToMove.style.display = 'block';
+          contentToMove.style.opacity = '1';
+          contentToMove.style.visibility = 'visible';
+        }
+
+        // If it's a fragment, apply styles to all children
+        if (contentToMove instanceof DocumentFragment) {
+          Array.from(contentToMove.children).forEach(function(child) {
+            child.style.display = 'block';
+            child.style.opacity = '1';
+            child.style.visibility = 'visible';
+          });
+        }
+
+        // Clear modal content and MOVE (not clone) the content
         dynamicContent.innerHTML = '';
-        dynamicContent.appendChild(clonedContent);
-        
-        // Re-initialize Webflow forms if they exist in the cloned content
-        var clonedForms = clonedContent.querySelectorAll('form[data-name]');
-        if (clonedForms.length > 0 && window.Webflow) {
-          setTimeout(function() {
-            window.Webflow.destroy();
-            window.Webflow.ready();
-            window.Webflow.require('ix2').init();
-          }, 50);
-        }
+        dynamicContent.appendChild(contentToMove);
         
         // Show content with fade in
         setTimeout(function() {
@@ -2100,9 +2101,25 @@ document.addEventListener("DOMContentLoaded", function() {
         
         var dynamicContent = content.querySelector(s.dynamicContent);
         if (dynamicContent) {
+          // MOVE content back to original location (restore)
+          var sourceSelector = dynamicContent.getAttribute('data-source-selector');
+          
+          if (sourceSelector) {
+            var originalContainer = document.querySelector(sourceSelector);
+            
+            if (originalContainer) {
+              // Move all children from modal back to original container
+              while (dynamicContent.firstChild) {
+                originalContainer.appendChild(dynamicContent.firstChild);
+              }
+            }
+          }
+          
+          // Clean up
           dynamicContent.innerHTML = '';
           dynamicContent.style.opacity = '0';
           dynamicContent.style.visibility = 'hidden';
+          dynamicContent.removeAttribute('data-source-selector');
         }
         
         var titleElement = content.querySelector(s.title);
