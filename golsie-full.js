@@ -2054,6 +2054,13 @@ document.addEventListener("DOMContentLoaded", function() {
           clonedContent.removeAttribute('id');
         }
         
+        // Remove 'disabled' attribute from all form elements
+        // Webflow adds this for validation, but loses track after ID removal
+        var disabledElements = clonedContent.querySelectorAll('[disabled]');
+        disabledElements.forEach(function(el) {
+          el.removeAttribute('disabled');
+        });
+        
         // Clear and insert into modal
         dynamicContent.innerHTML = '';
         dynamicContent.appendChild(clonedContent);
