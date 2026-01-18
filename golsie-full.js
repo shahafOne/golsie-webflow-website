@@ -2084,6 +2084,13 @@ document.addEventListener("DOMContentLoaded", function() {
             btn.removeAttribute('disabled');
           });
           
+          // FIX: Remove disabled attribute from submit buttons after moving
+          setTimeout(function() {
+            var submitButtons = dynamicContent.querySelectorAll('input[type="submit"], button[type="submit"]');
+            submitButtons.forEach(function(btn) {
+              btn.removeAttribute('disabled');
+            });
+  
           // Add HTML5 validation listeners to re-enable proper button behavior
           var forms = dynamicContent.querySelectorAll('form');
           forms.forEach(function(form) {
@@ -2106,7 +2113,23 @@ document.addEventListener("DOMContentLoaded", function() {
               input.addEventListener('input', updateButtonState);
               input.addEventListener('change', updateButtonState);
             });
-            
+            // RE-INITIALIZE WEBFLOW FORMS (CRITICAL!)
+            // This tells Webflow about the moved form so submissions work
+            setTimeout(function() {
+              if (window.Webflow && typeof window.Webflow.destroy === 'function') {
+                try {
+                  console.log('[Golsie] Re-initializing Webflow for moved form...');
+                  window.Webflow.destroy();
+                  window.Webflow.ready();
+                  if (window.Webflow.require) {
+                    window.Webflow.require('ix2').init();
+                    console.log('[Golsie] Webflow re-initialized successfully');
+                  }
+                } catch (e) {
+                  console.warn('[Golsie] Webflow re-init failed:', e.message);
+                }
+              }
+            }, 150);
             // Initial check
             updateButtonState();
           });
