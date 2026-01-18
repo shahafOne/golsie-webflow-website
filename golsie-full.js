@@ -2075,6 +2075,42 @@ document.addEventListener("DOMContentLoaded", function() {
         // Clear modal content and MOVE (not clone) the content
         dynamicContent.innerHTML = '';
         dynamicContent.appendChild(contentToMove);
+
+        // FIX: Remove disabled attribute from submit buttons after moving
+        // Webflow adds this in hidden forms, but we want it enabled in modal
+        setTimeout(function() {
+          var submitButtons = dynamicContent.querySelectorAll('input[type="submit"], button[type="submit"]');
+          submitButtons.forEach(function(btn) {
+            btn.removeAttribute('disabled');
+          });
+          
+          // Add HTML5 validation listeners to re-enable proper button behavior
+          var forms = dynamicContent.querySelectorAll('form');
+          forms.forEach(function(form) {
+            var inputs = form.querySelectorAll('input, textarea, select');
+            var buttons = form.querySelectorAll('input[type="submit"], button[type="submit"]');
+            
+            function updateButtonState() {
+              var isValid = form.checkValidity();
+              buttons.forEach(function(btn) {
+                if (isValid) {
+                  btn.removeAttribute('disabled');
+                } else {
+                  btn.setAttribute('disabled', 'disabled');
+                }
+              });
+            }
+            
+            // Listen to form changes
+            inputs.forEach(function(input) {
+              input.addEventListener('input', updateButtonState);
+              input.addEventListener('change', updateButtonState);
+            });
+            
+            // Initial check
+            updateButtonState();
+          });
+        }, 50);
         
         // Show content with fade in
         setTimeout(function() {
