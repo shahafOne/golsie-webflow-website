@@ -2042,9 +2042,31 @@ document.addEventListener("DOMContentLoaded", function() {
         clonedContent.style.opacity = '1';
         clonedContent.style.visibility = 'visible';
         
+        // Fix Webflow form conflicts: Remove all IDs from cloned content
+        // This prevents duplicate ID issues with Webflow forms
+        var elementsWithId = clonedContent.querySelectorAll('[id]');
+        elementsWithId.forEach(function(el) {
+          el.removeAttribute('id');
+        });
+        
+        // Also remove ID from the cloned content itself if it has one
+        if (clonedContent.id) {
+          clonedContent.removeAttribute('id');
+        }
+        
         // Clear and insert into modal
         dynamicContent.innerHTML = '';
         dynamicContent.appendChild(clonedContent);
+        
+        // Re-initialize Webflow forms if they exist in the cloned content
+        var clonedForms = clonedContent.querySelectorAll('form[data-name]');
+        if (clonedForms.length > 0 && window.Webflow) {
+          setTimeout(function() {
+            window.Webflow.destroy();
+            window.Webflow.ready();
+            window.Webflow.require('ix2').init();
+          }, 50);
+        }
         
         // Show content with fade in
         setTimeout(function() {
