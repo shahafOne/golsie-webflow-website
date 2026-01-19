@@ -2141,7 +2141,7 @@ document.addEventListener("DOMContentLoaded", function() {
           dynamicContent.style.visibility = 'visible';
           dynamicContent.style.transition = 'opacity 0.4s ease';
           dynamicContent.style.opacity = '1';
-        }, 100);
+        }, Config.modalLoadingMinTime);
       },
       onClose: function(content) {
         // Optional: add any close logic here
