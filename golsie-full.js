@@ -2003,20 +2003,27 @@ document.addEventListener("DOMContentLoaded", function() {
           return;
         }
         
-        // Show loading initially
+        // This sequence is required for proper modal overlay rendering
+        if (dynamicContent) {
+          dynamicContent.style.visibility = 'visible';
+          dynamicContent.style.opacity = '1';
+        }
+
         if (loadingIndicator) {
           loadingIndicator.style.display = 'block';
           loadingIndicator.style.opacity = '1';
           loadingIndicator.style.visibility = 'visible';
+          loadingIndicator.style.zIndex = '999';
         }
-        
-        // Hide dynamic content initially
+
+        // NOW hide dynamic content initially (will be shown after loading)
         dynamicContent.style.opacity = '0';
         dynamicContent.style.visibility = 'hidden';
-        
+
         // Set title if provided
         if (titleElement && data.title) {
           titleElement.textContent = data.title;
+          titleElement.style.opacity = '0';
         }
         
         // Find source element by selector
