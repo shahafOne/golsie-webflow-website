@@ -2121,6 +2121,7 @@ document.addEventListener("DOMContentLoaded", function() {
               if (window.Webflow && typeof window.Webflow.destroy === 'function') {
                 try {
                   console.log('[Golsie] Re-initializing Webflow for moved form...');
+                  var scrollBeforeWebflow = window.scrollY;
                   window.Webflow.destroy();
                   window.Webflow.ready();
 
