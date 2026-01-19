@@ -2135,8 +2135,8 @@ document.addEventListener("DOMContentLoaded", function() {
                   window.Webflow.destroy();
                   window.Webflow.ready();
                   if (window.Webflow.require) {
-                    window.Webflow.require('ix2').init();
-                    console.log('[Golsie] Webflow re-initialized successfully');
+                    //window.Webflow.require('ix2').init();
+                    //console.log('[Golsie] Webflow re-initialized successfully');
                   }
                 } catch (e) {
                   console.warn('[Golsie] Webflow re-init failed:', e.message);
