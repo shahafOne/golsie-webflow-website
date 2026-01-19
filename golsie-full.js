@@ -2115,32 +2115,48 @@ document.addEventListener("DOMContentLoaded", function() {
               input.addEventListener('input', updateButtonState);
               input.addEventListener('change', updateButtonState);
             });
+
             // RE-INITIALIZE WEBFLOW FORMS (CRITICAL!)
             // This tells Webflow about the moved form so submissions work
             setTimeout(function() {
               if (window.Webflow && typeof window.Webflow.destroy === 'function') {
                 try {
                   console.log('[Golsie] Re-initializing Webflow for moved form...');
+                  
+                  // Save scroll position BEFORE Webflow re-init
                   var scrollBeforeWebflow = window.scrollY;
                   
                   window.Webflow.destroy();
                   window.Webflow.ready();
-
+                  
                   if (window.Webflow.require) {
                     window.Webflow.require('ix2').init();
                     
                     // IMMEDIATELY restore scroll after ix2.init to prevent header issue
                     requestAnimationFrame(function() {
-                      window.scrollTo(0, scrollBeforeWebflow);
-                      document.body.style.top = -scrollBeforeWebflow + 'px';
+                      // Scroll up 1px then back to trigger header recalculation
+                      window.scrollTo(0, scrollBeforeWebflow - 1);
+                      document.body.style.top = -(scrollBeforeWebflow - 1) + 'px';
                       
-                      // Double restore after a tiny delay to be absolutely sure
-                      setTimeout(function() {
+                      requestAnimationFrame(function() {
+                        // Scroll back to original position
                         window.scrollTo(0, scrollBeforeWebflow);
                         document.body.style.top = -scrollBeforeWebflow + 'px';
-                      }, 10);
+                        
+                        // CRITICAL: Manually trigger scroll event to force header update
+                        window.dispatchEvent(new Event('scroll'));
+                        
+                        // Double-trigger after a tiny delay to be absolutely sure
+                        setTimeout(function() {
+                          window.scrollTo(0, scrollBeforeWebflow);
+                          document.body.style.top = -scrollBeforeWebflow + 'px';
+                          window.dispatchEvent(new Event('scroll'));
+                        }, 50);
+                      });
                     });
                   }
+                  
+                  console.log('[Golsie] Webflow re-initialized successfully');
                 } catch (e) {
                   console.warn('[Golsie] Webflow re-init failed:', e.message);
                 }
