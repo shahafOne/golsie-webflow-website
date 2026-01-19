@@ -2189,8 +2189,8 @@ document.addEventListener("DOMContentLoaded", function() {
           loadingIndicator.style.display = 'none';
           loadingIndicator.style.opacity = '0';
         }
+
         // RE-INITIALIZE WEBFLOW IX2 AFTER MODAL CLOSES
-        // This restores animations and interactions that were moved
         setTimeout(function() {
           if (window.Webflow && window.Webflow.require) {
             try {
@@ -2198,19 +2198,29 @@ document.addEventListener("DOMContentLoaded", function() {
               window.Webflow.destroy();
               window.Webflow.ready();
               window.Webflow.require('ix2').init();
+              
+              // Force ALL page animations to restart by triggering page load events
+              setTimeout(function() {
+                // Dispatch DOMContentLoaded to restart page-load animations
+                var event = document.createEvent('Event');
+                event.initEvent('DOMContentLoaded', true, true);
+                window.document.dispatchEvent(event);
+                
+                // Also trigger readystatechange
+                var readyEvent = document.createEvent('Event');
+                readyEvent.initEvent('readystatechange', true, true);
+                document.dispatchEvent(readyEvent);
+                
+                console.log('[Golsie] Forced restart of all page animations');
+              }, 100);
+              
               console.log('[Golsie] Webflow ix2 re-initialized successfully');
               
               // Force header to recalculate by triggering scroll event
               var currentScroll = window.scrollY;
-              
-              // Scroll up 1px then back to force recalculation
               window.scrollTo(0, currentScroll - 1);
-              
-              // Use requestAnimationFrame to ensure the scroll is painted
               requestAnimationFrame(function() {
                 window.scrollTo(0, currentScroll);
-                
-                // Manually trigger scroll event to force header update
                 window.dispatchEvent(new Event('scroll'));
               });
               
