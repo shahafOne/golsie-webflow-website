@@ -2123,6 +2123,22 @@ document.addEventListener("DOMContentLoaded", function() {
                   console.log('[Golsie] Re-initializing Webflow for moved form...');
                   window.Webflow.destroy();
                   window.Webflow.ready();
+
+                  if (window.Webflow.require) {
+                    window.Webflow.require('ix2').init();
+                    
+                    // IMMEDIATELY restore scroll after ix2.init to prevent header issue
+                    requestAnimationFrame(function() {
+                      window.scrollTo(0, scrollBeforeWebflow);
+                      document.body.style.top = -scrollBeforeWebflow + 'px';
+                      
+                      // Double restore after a tiny delay to be absolutely sure
+                      setTimeout(function() {
+                        window.scrollTo(0, scrollBeforeWebflow);
+                        document.body.style.top = -scrollBeforeWebflow + 'px';
+                      }, 10);
+                    });
+                  }
                 } catch (e) {
                   console.warn('[Golsie] Webflow re-init failed:', e.message);
                 }
