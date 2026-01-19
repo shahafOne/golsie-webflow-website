@@ -2085,17 +2085,6 @@ document.addEventListener("DOMContentLoaded", function() {
         dynamicContent.innerHTML = '';
         dynamicContent.appendChild(contentToMove);
 
-        requestAnimationFrame(function() {
-          window.scrollTo(0, savedScrollY);
-          document.body.style.top = -savedScrollY + 'px';
-          console.log("asdsadasd");
-          // Double-check after another frame to be absolutely sure
-          requestAnimationFrame(function() {
-            window.scrollTo(0, savedScrollY);
-            document.body.style.top = -savedScrollY + 'px';
-          });
-        });
-        
         // FIX: Remove disabled attribute from submit buttons after moving
         // Webflow adds this in hidden forms, but we want it enabled in modal
         setTimeout(function() {
