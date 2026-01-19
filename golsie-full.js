@@ -2189,6 +2189,21 @@ document.addEventListener("DOMContentLoaded", function() {
           loadingIndicator.style.display = 'none';
           loadingIndicator.style.opacity = '0';
         }
+        // RE-INITIALIZE WEBFLOW IX2 AFTER MODAL CLOSES
+        // This restores animations and interactions that were moved
+        setTimeout(function() {
+          if (window.Webflow && window.Webflow.require) {
+            try {
+              console.log('[Golsie] Re-initializing Webflow ix2 after modal close...');
+              window.Webflow.destroy();
+              window.Webflow.ready();
+              window.Webflow.require('ix2').init();
+              console.log('[Golsie] Webflow ix2 re-initialized successfully');
+            } catch (e) {
+              console.warn('[Golsie] Webflow ix2 re-init failed:', e.message);
+            }
+          }
+        }, 100);
       }
     });
     
