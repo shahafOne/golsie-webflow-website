@@ -2087,6 +2087,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         window.scrollTo(0, savedScrollY);
         document.body.style.top = -savedScrollY + 'px';
+        console.log("asdsadasd");
         // FIX: Remove disabled attribute from submit buttons after moving
         // Webflow adds this in hidden forms, but we want it enabled in modal
         setTimeout(function() {
