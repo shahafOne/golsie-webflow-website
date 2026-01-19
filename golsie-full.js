@@ -2199,6 +2199,21 @@ document.addEventListener("DOMContentLoaded", function() {
               window.Webflow.ready();
               window.Webflow.require('ix2').init();
               console.log('[Golsie] Webflow ix2 re-initialized successfully');
+              
+              // Force header to recalculate by triggering scroll event
+              var currentScroll = window.scrollY;
+              
+              // Scroll up 1px then back to force recalculation
+              window.scrollTo(0, currentScroll - 1);
+              
+              // Use requestAnimationFrame to ensure the scroll is painted
+              requestAnimationFrame(function() {
+                window.scrollTo(0, currentScroll);
+                
+                // Manually trigger scroll event to force header update
+                window.dispatchEvent(new Event('scroll'));
+              });
+              
             } catch (e) {
               console.warn('[Golsie] Webflow ix2 re-init failed:', e.message);
             }
