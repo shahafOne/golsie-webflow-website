@@ -2123,7 +2123,13 @@ document.addEventListener("DOMContentLoaded", function() {
                   console.log('[Golsie] Re-initializing Webflow for moved form...');
                   
                   var scrollBeforeWebflow = window.scrollY;
-                  
+                  var header = document.querySelector('.headersection');
+      
+                  // LOCK HEADER: Prevent visual state changes during re-init
+                  if (header) {
+                    header.classList.add('ix2-reinit-lock');
+                  }
+
                   window.Webflow.destroy();
                   window.Webflow.ready();
                   
@@ -2151,6 +2157,12 @@ document.addEventListener("DOMContentLoaded", function() {
                           window.dispatchEvent(new Event('scroll'));
                         }, 50);
                       });
+                      // UNLOCK HEADER: Allow state changes now that scroll is restored
+                      setTimeout(function() {
+                        if (header) {
+                          header.classList.remove('ix2-reinit-lock');
+                        }
+                      },10);
                     });
                   }
                   
