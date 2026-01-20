@@ -2121,16 +2121,19 @@ document.addEventListener("DOMContentLoaded", function() {
               if (window.Webflow && typeof window.Webflow.destroy === 'function') {
                 try {
                   console.log('[Golsie] Re-initializing Webflow for moved form...');
+                  
                   var scrollBeforeWebflow = window.scrollY;
                   var header = document.querySelector('.headersection');
-
+                  
+                  // LOCK HEADER: Prevent visual state changes during re-init
                   if (header) {
                     header.classList.add('ix2-reinit-lock');
+                    header.style.transition = 'none'; // ← ADDED: Disable transitions
                   }
-
+                  
                   window.Webflow.destroy();
                   window.Webflow.ready();
-
+                  
                   if (window.Webflow.require) {
                     window.Webflow.require('ix2').init();
                     
@@ -2144,18 +2147,31 @@ document.addEventListener("DOMContentLoaded", function() {
                         window.scrollTo(0, scrollBeforeWebflow);
                         document.body.style.top = -scrollBeforeWebflow + 'px';
                       }, 10);
+                      
+                      // UNLOCK HEADER: Allow state changes again
                       setTimeout(function() {
                         if (header) {
                           header.classList.remove('ix2-reinit-lock');
+                          header.style.transition = ''; // ← ADDED: Re-enable transitions
                         }
+                        
+                        // Trigger scroll event to update header state
                         window.dispatchEvent(new Event('scroll'));
                         
                         console.log('[Golsie] Header unlocked at scroll:', scrollBeforeWebflow);
                       }, 100);
                     });
                   }
+                  
+                  console.log('[Golsie] Webflow re-initialized successfully');
                 } catch (e) {
                   console.warn('[Golsie] Webflow re-init failed:', e.message);
+                  // ↓ ADDED: Cleanup on error (prevents header from staying locked forever)
+                  var header = document.querySelector('.headersection');
+                  if (header) {
+                    header.classList.remove('ix2-reinit-lock');
+                    header.style.transition = '';
+                  }
                 }
               }
             }, 150);
