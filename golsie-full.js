@@ -2168,7 +2168,6 @@ document.addEventListener("DOMContentLoaded", function() {
                   var header = document.querySelector('.headersection');
                   if (header) {
                     header.classList.remove('ix2-reinit-lock');
-                    header.style.transition = '';
                   }
                 }
               }
