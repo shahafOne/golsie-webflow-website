@@ -2229,37 +2229,49 @@ document.addEventListener("DOMContentLoaded", function() {
           if (window.Webflow && window.Webflow.require) {
             try {
               console.log('[Golsie] Re-initializing Webflow ix2 after modal close...');
+              
+              // Save current scroll position
+              var savedScroll = window.scrollY;
+              var header = document.querySelector('.headersection');
+              
+              // LOCK HEADER: Prevent state changes during re-init
+              if (header) {
+                header.classList.add('ix2-reinit-lock');
+                header.style.transition = 'none';
+              }
+              
+              // Destroy and re-init Webflow
               window.Webflow.destroy();
               window.Webflow.ready();
               window.Webflow.require('ix2').init();
               
-              // Force ALL page animations to restart by triggering page load events
+              // IMMEDIATELY restore scroll position (same frame, no RAF)
+              window.scrollTo(0, savedScroll);
+              document.body.style.top = -savedScroll + 'px';
+              
+              // UNLOCK HEADER: Allow state changes again
               setTimeout(function() {
-                // Dispatch DOMContentLoaded to restart page-load animations
-                var event = document.createEvent('Event');
-                event.initEvent('DOMContentLoaded', true, true);
-                window.document.dispatchEvent(event);
+                if (header) {
+                  header.classList.remove('ix2-reinit-lock');
+                  header.style.transition = '';
+                }
                 
-                // Also trigger readystatechange
-                var readyEvent = document.createEvent('Event');
-                readyEvent.initEvent('readystatechange', true, true);
-                document.dispatchEvent(readyEvent);
+                // Trigger scroll event to update header state
+                window.dispatchEvent(new Event('scroll'));
                 
-                console.log('[Golsie] Forced restart of all page animations');
+                console.log('[Golsie] Header unlocked at scroll:', savedScroll);
               }, 100);
               
               console.log('[Golsie] Webflow ix2 re-initialized successfully');
               
-              // Force header to recalculate by triggering scroll event
-              var currentScroll = window.scrollY;
-              window.scrollTo(0, currentScroll - 1);
-              requestAnimationFrame(function() {
-                window.scrollTo(0, currentScroll);
-                window.dispatchEvent(new Event('scroll'));
-              });
-              
             } catch (e) {
               console.warn('[Golsie] Webflow ix2 re-init failed:', e.message);
+              // Cleanup on error
+              var header = document.querySelector('.headersection');
+              if (header) {
+                header.classList.remove('ix2-reinit-lock');
+                header.style.transition = '';
+              }
             }
           }
         }, 100);
