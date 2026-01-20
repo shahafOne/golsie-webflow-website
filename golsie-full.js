@@ -2128,7 +2128,6 @@ document.addEventListener("DOMContentLoaded", function() {
                   // LOCK HEADER: Prevent visual state changes during re-init
                   if (header) {
                     header.classList.add('ix2-reinit-lock');
-                    header.style.transition = 'none'; // ← ADDED: Disable transitions
                   }
                   
                   window.Webflow.destroy();
@@ -2152,7 +2151,6 @@ document.addEventListener("DOMContentLoaded", function() {
                       setTimeout(function() {
                         if (header) {
                           header.classList.remove('ix2-reinit-lock');
-                          header.style.transition = ''; // ← ADDED: Re-enable transitions
                         }
                         
                         // Trigger scroll event to update header state
