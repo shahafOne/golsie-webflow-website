@@ -2123,12 +2123,6 @@ document.addEventListener("DOMContentLoaded", function() {
                   console.log('[Golsie] Re-initializing Webflow for moved form...');
                   
                   var scrollBeforeWebflow = window.scrollY;
-                  var header = document.querySelector('.headersection');
-                  
-                  // LOCK HEADER: Prevent visual state changes during re-init
-                  if (header) {
-                    header.classList.add('ix2-reinit-lock');
-                  }
                   
                   window.Webflow.destroy();
                   window.Webflow.ready();
@@ -2138,37 +2132,31 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     // IMMEDIATELY restore scroll after ix2.init to prevent header issue
                     requestAnimationFrame(function() {
-                      window.scrollTo(0, scrollBeforeWebflow);
-                      document.body.style.top = -scrollBeforeWebflow + 'px';
+                      // Scroll up 1px then back to trigger header recalculation
+                      window.scrollTo(0, scrollBeforeWebflow - 1);
+                      document.body.style.top = -(scrollBeforeWebflow - 1) + 'px';
                       
-                      // Double restore after a tiny delay to be absolutely sure
-                      setTimeout(function() {
+                      requestAnimationFrame(function() {
+                        // Scroll back to original position
                         window.scrollTo(0, scrollBeforeWebflow);
                         document.body.style.top = -scrollBeforeWebflow + 'px';
-                      }, 10);
-                      
-                      // UNLOCK HEADER: Allow state changes again
-                      setTimeout(function() {
-                        if (header) {
-                          header.classList.remove('ix2-reinit-lock');
-                        }
                         
-                        // Trigger scroll event to update header state
+                        // CRITICAL: Manually trigger scroll event to force header update
                         window.dispatchEvent(new Event('scroll'));
                         
-                        console.log('[Golsie] Header unlocked at scroll:', scrollBeforeWebflow);
-                      }, 100);
+                        // Double-trigger after a tiny delay to be absolutely sure
+                        setTimeout(function() {
+                          window.scrollTo(0, scrollBeforeWebflow);
+                          document.body.style.top = -scrollBeforeWebflow + 'px';
+                          window.dispatchEvent(new Event('scroll'));
+                        }, 50);
+                      });
                     });
                   }
                   
                   console.log('[Golsie] Webflow re-initialized successfully');
                 } catch (e) {
                   console.warn('[Golsie] Webflow re-init failed:', e.message);
-                  // ↓ ADDED: Cleanup on error (prevents header from staying locked forever)
-                  var header = document.querySelector('.headersection');
-                  if (header) {
-                    header.classList.remove('ix2-reinit-lock');
-                  }
                 }
               }
             }, 150);
