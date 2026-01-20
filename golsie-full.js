@@ -2147,7 +2147,6 @@ document.addEventListener("DOMContentLoaded", function() {
                       setTimeout(function() {
                         if (header) {
                           header.classList.remove('ix2-reinit-lock');
-                          header.style.transition = '';
                         }
                         window.dispatchEvent(new Event('scroll'));
                         
