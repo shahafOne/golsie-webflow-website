@@ -1549,8 +1549,27 @@ document.addEventListener("DOMContentLoaded", function() {
           // Make sure iframe is visible (in case it was hidden on close)
           songlinkIframe.style.display = 'block';
           
-          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl);
-          songlinkIframe.src = embedUrl;
+          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl.replace(/^https?:\/\//i, ''));          
+          fetch(embedUrl)
+            .then(function(response) {
+              if (response.status === 429) {
+                console.warn('[Golsie] Songlink 429 - Too Many Requests');
+                loadingState.songlink = true;
+                if (songlinkIframeContainer) {
+                  IframeRefreshHelper.showError(songlinkIframeContainer, songlinkIframe, function() {
+                    console.log('[Golsie] Retrying Songlink after 429...');
+                    loadingState.songlink = false;
+                    loadSonglinkIframe(songUrl);
+                  });
+                }
+                checkAllReady();
+                return;
+              }
+              songlinkIframe.src = embedUrl;
+            })
+            .catch(function() {
+              songlinkIframe.src = embedUrl; // CORS blocked — load directly as before
+            });
           
           songlinkIframe.onload = function() {
             setTimeout(function() {
