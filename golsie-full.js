@@ -106,6 +106,30 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     }
   };
+
+  var DirectLinksHelper = {
+    render: function(content, platformLinks, platformApple, platformYoutube, platformSpotify, data) {
+      var wrapper = content.querySelector(platformLinks);
+      if (!wrapper) return;
+
+      var appleLink = wrapper.querySelector(platformApple);
+      var youtubeLink = wrapper.querySelector(platformYoutube);
+      var spotifyLink = wrapper.querySelector(platformSpotify);
+
+      if (appleLink) {
+        appleLink.href = data.appleMusicUrl || '#';
+        appleLink.style.display = data.appleMusicUrl ? '' : 'none';
+      }
+      if (youtubeLink) {
+        youtubeLink.href = data.youtubeUrl || '#';
+        youtubeLink.style.display = data.youtubeUrl ? '' : 'none';
+      }
+      if (spotifyLink) {
+        spotifyLink.href = data.songUrl || '#';
+        spotifyLink.style.display = data.songUrl ? '' : 'none';
+      }
+    }
+  };
   
   var ModalSelectors = {
     songlink: {
@@ -117,6 +141,10 @@ document.addEventListener("DOMContentLoaded", function() {
       dynamicContent: '.modaldynamiccontent',  
       loadingIndicator: '.modalloading',  
       spotifyiframe_height: '82',
+      platformLinks: '.modalsonglinkinkswrapper',
+      platformApple: '.modalplatformlinkapplemusic',
+      platformYoutube: '.modalplatformlinkyoutube',
+      platformSpotify: '.modalplatformlinkspotifymusic',
     },
     youtube: {
       title: '.modaltitletextyoutube',
@@ -1693,10 +1721,16 @@ document.addEventListener("DOMContentLoaded", function() {
         if (songlinkIframe) songlinkIframe.style.opacity = '0';
         if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
         
-        // Load Songlink iframe
         if (data.songUrl) {
           loadSonglinkIframe(data.songUrl);
         }
+        DirectLinksHelper.render(content,
+          '.modalsonglinkinkswrapper',
+          '.modalplatformlinkapplemusic',
+          '.modalplatformlinkyoutube',
+          '.modallinkspotifymusic',
+          data
+        );
         
         // Load Spotify content if applicable
         if (data.songUrl && data.songUrl.includes('spotify.com')) {
@@ -1813,8 +1847,10 @@ document.addEventListener("DOMContentLoaded", function() {
             albumName: this.getAttribute('data-album-name'),
             releaseDate: this.getAttribute('data-release-date'),
             tracklist: this.getAttribute('data-tracklist'),
-            creditsUrl: this.getAttribute('data-credits-url')
-          };
+            creditsUrl: this.getAttribute('data-credits-url'),
+            youtubeUrl: this.getAttribute('data-youtube-url'),
+            appleMusicUrl: this.getAttribute('data-apple-music-url')
+          };          
           ModalSystem.open('musicpage', data);
           return;
         }
@@ -1825,7 +1861,12 @@ document.addEventListener("DOMContentLoaded", function() {
         var songUrl = this.getAttribute('data-song-url');
         var songTitle = this.getAttribute('data-song-title') || 'Golsie';
         if (!songUrl) return;
-        ModalSystem.open('songlink', { songUrl: songUrl, songTitle: songTitle });
+        ModalSystem.open('songlink', {
+          songUrl: songUrl,
+          songTitle: songTitle,
+          youtubeUrl: this.getAttribute('data-youtube-url'),
+          appleMusicUrl: this.getAttribute('data-apple-music-url')
+        });      
       });
     });
   }
@@ -2330,7 +2371,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     });
   }
-  
+
   // Music Page Modal
   if (modalReady) {
     ModalSystem.registerModalType('musicpage', {
@@ -2590,6 +2631,13 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
           loadingState.songlink = true;
         }
+        DirectLinksHelper.render(content,
+          '.modalmusicpagelinkswrapper',
+          '.modalplatformlinkapplemusic',
+          '.modalplatformlinkyoutube',
+          '.modallinkspotifymusic',
+          data
+        );
       },
 
       onClose: function(content) {},
