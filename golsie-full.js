@@ -1848,7 +1848,7 @@ document.addEventListener("DOMContentLoaded", function() {
             releaseDate: this.getAttribute('data-release-date'),
             tracklist: this.getAttribute('data-tracklist'),
             creditsUrl: this.getAttribute('data-credits-url'),
-            youtubeUrl: this.getAttribute('data-youtube-url'),
+            youtubeUrl: this.getAttribute('data-youtube-music-url'),
             appleMusicUrl: this.getAttribute('data-apple-music-url')
           };          
           ModalSystem.open('musicpage', data);
@@ -1864,7 +1864,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ModalSystem.open('songlink', {
           songUrl: songUrl,
           songTitle: songTitle,
-          youtubeUrl: this.getAttribute('data-youtube-url'),
+          youtubeUrl: this.getAttribute('data-youtube-music-url'),
           appleMusicUrl: this.getAttribute('data-apple-music-url')
         });      
       });
