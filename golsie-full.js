@@ -118,15 +118,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
       if (appleLink) {
         appleLink.href = data.appleMusicUrl || '#';
-        appleLink.style.display = data.appleMusicUrl ? '' : 'none';
+        appleLink.style.display = data.appleMusicUrl ? 'block' : 'none';
       }
       if (youtubeLink) {
         youtubeLink.href = data.youtubeUrl || '#';
-        youtubeLink.style.display = data.youtubeUrl ? '' : 'none';
+        youtubeLink.style.display = data.youtubeUrl ? 'block' : 'none';
       }
       if (spotifyLink) {
         spotifyLink.href = data.songUrl || '#';
-        spotifyLink.style.display = data.songUrl ? '' : 'none';
+        spotifyLink.style.display = data.songUrl ? 'block' : 'none';
       }
     }
   };
