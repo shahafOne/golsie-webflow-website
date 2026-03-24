@@ -1724,14 +1724,16 @@ document.addEventListener("DOMContentLoaded", function() {
         if (data.songUrl) {
           loadSonglinkIframe(data.songUrl);
         }
-        DirectLinksHelper.render(content,
-          '.modalsonglinklinkswrapper',
-          '.modalplatformlinkapplemusic',
-          '.modalplatformlinkyoutube',
-          '.modalplatformlinkspotifymusic',
-          data
-        );
-        
+        setTimeout(function() {
+          DirectLinksHelper.render(content,
+            '.modalsonglinklinkswrapper',
+            '.modalplatformlinkapplemusic',
+            '.modalplatformlinkyoutube',
+            '.modalplatformlinkspotifymusic',
+            data
+          );
+        }, Config.modalLoadingMinTime + Config.modalAnimationDuration);
+
         // Load Spotify content if applicable
         if (data.songUrl && data.songUrl.includes('spotify.com')) {
           SpotifyHelper.fetchOEmbed(data.songUrl, function(error, oembedData) {
@@ -2631,13 +2633,15 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
           loadingState.songlink = true;
         }
-        DirectLinksHelper.render(content,
-          '.modalmusicpagelinkswrapper',
-          '.modalplatformlinkapplemusic',
-          '.modalplatformlinkyoutube',
-          '.modallinkspotifymusic',
-          data
-        );
+        setTimeout(function() {
+          DirectLinksHelper.render(content,
+            '.modalmusicpagelinkswrapper',
+            '.modalplatformlinkapplemusic',
+            '.modalplatformlinkyoutube',
+            '.modallinkspotifymusic',
+            data
+          );
+        }, Config.modalLoadingMinTime + Config.modalAnimationDuration);
       },
 
       onClose: function(content) {},
