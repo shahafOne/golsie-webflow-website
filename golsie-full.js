@@ -1803,8 +1803,23 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('[data-song-url]').forEach(function(button) {
       button.addEventListener('click', function(e) {
         var modalType = this.getAttribute('data-modal-type');
+        if (modalType === 'musicpage') {
+          e.preventDefault();
+          var data = {
+            songUrl: this.getAttribute('data-song-url'),
+            songTitle: this.getAttribute('data-song-title') || 'Golsie',
+            bandcampId: this.getAttribute('data-bandcamp-id'),
+            bandcampType: this.getAttribute('data-bandcamp-type') || 'track',
+            albumName: this.getAttribute('data-album-name'),
+            releaseDate: this.getAttribute('data-release-date'),
+            tracklist: this.getAttribute('data-tracklist'),
+            creditsUrl: this.getAttribute('data-credits-url')
+          };
+          ModalSystem.open('musicpage', data);
+          return;
+        }
         if (modalType && modalType !== 'songlink') {
-          return; // Don't handle custom modals
+          return; // Don't handle other custom modals
         }
         e.preventDefault();
         var songUrl = this.getAttribute('data-song-url');
@@ -2313,6 +2328,290 @@ document.addEventListener("DOMContentLoaded", function() {
           title: modalTitle || ''
         });
       });
+    });
+  }
+  
+  // Music Page Modal
+  if (modalReady) {
+    ModalSystem.registerModalType('musicpage', {
+      contentClass: 'modalcontentmusicpage',
+      
+      updateContent: function(content, data) {
+        var self = this;
+        var s = {
+          thumbnail: '.modalsongmusicpagethumbnail',
+          title: '.modalmusicpagetitle',
+          albumName: '.modalmusicpagealbum',
+          releaseDate: '.modalmusicpagereleasedate',
+          tracklistContainer: '.modalmusictracklistcontainer',
+          tracklistContent: '.modalmusicpagetracklist',
+          creditsLink: '.modalmusicpagecreditsmore',
+          bandcampMini: '.bandcamp-iframe-mini',
+          bandcampFull: '.bandcamp-player-full',
+          expandButton: '.bandcampexpandtextbuttonlink',
+          songlinkIframeContainer: '.songlinkmusicpage-iframe-modal',
+          dynamicContent: '.modaldynamiccontent',
+          loadingIndicator: '.modalloading'
+        };
+
+        content.style.display = 'block';
+
+        var dynamicContent = content.querySelector(s.dynamicContent);
+        var loadingIndicator = self.container.querySelector(s.loadingIndicator);
+        var thumbnail = content.querySelector(s.thumbnail);
+        var titleElement = content.querySelector(s.title);
+        var albumElement = content.querySelector(s.albumName);
+        var releaseDateElement = content.querySelector(s.releaseDate);
+        var tracklistContainer = content.querySelector(s.tracklistContainer);
+        var tracklistContent = content.querySelector(s.tracklistContent);
+        var creditsLink = content.querySelector(s.creditsLink);
+        var bandcampMini = content.querySelector(s.bandcampMini);
+        var bandcampFull = content.querySelector(s.bandcampFull);
+        var expandButton = content.querySelector(s.expandButton);
+        var songlinkIframeContainer = content.querySelector(s.songlinkIframeContainer);
+
+        var loadingState = {
+          thumbnail: false, title: false, bandcamp: false,
+          songlink: false, minimumTimeElapsed: false, timeout: false
+        };
+        var loadingStartTime = Date.now();
+
+        if (dynamicContent) {
+          dynamicContent.style.visibility = 'visible';
+          dynamicContent.style.opacity = '1';
+        }
+        if (expandButton) {
+          expandButton.style.opacity = '0';
+          expandButton.style.visibility = 'hidden';
+        }
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'block';
+          loadingIndicator.style.opacity = '1';
+          loadingIndicator.style.visibility = 'visible';
+          loadingIndicator.style.zIndex = '999';
+        }
+        [thumbnail, titleElement, albumElement, releaseDateElement,
+         tracklistContainer, creditsLink, bandcampMini, songlinkIframeContainer].forEach(function(el) {
+          if (el) { el.style.opacity = '0'; el.style.visibility = 'hidden'; }
+        });
+
+        setTimeout(function() { loadingState.minimumTimeElapsed = true; checkAllReady(); }, Config.modalLoadingMinTime);
+        setTimeout(function() { loadingState.timeout = true; checkAllReady(); }, Config.modalLoadingTimeout);
+
+        function checkAllReady() {
+          var allReady = loadingState.minimumTimeElapsed && loadingState.thumbnail &&
+                         loadingState.title && loadingState.bandcamp && loadingState.songlink;
+          if (allReady || loadingState.timeout) {
+            var remainingTime = Math.max(0, Config.modalLoadingMinTime - (Date.now() - loadingStartTime));
+            setTimeout(function() {
+              if (loadingIndicator) {
+                loadingIndicator.style.transition = 'opacity 0.3s ease';
+                loadingIndicator.style.opacity = '0';
+                setTimeout(function() {
+                  loadingIndicator.style.display = 'none';
+                  loadingIndicator.style.visibility = 'hidden';
+                }, 300);
+              }
+              [thumbnail, titleElement, albumElement, releaseDateElement, creditsLink, bandcampMini, expandButton].forEach(function(el) {
+                if (el && !el.style.display.includes('none')) {
+                  el.style.visibility = 'visible';
+                  el.style.transition = 'opacity 0.4s ease';
+                  el.style.opacity = '1';
+                }
+              });
+              if (songlinkIframeContainer) {
+                setTimeout(function() {
+                  songlinkIframeContainer.style.visibility = 'visible';
+                  songlinkIframeContainer.style.transition = 'opacity 0.6s ease';
+                  songlinkIframeContainer.style.opacity = '1';
+                }, Config.songlinkExtraDelay);
+              }
+              if (tracklistContainer && tracklistContainer.style.display !== 'none') {
+                tracklistContainer.style.visibility = 'visible';
+                tracklistContainer.style.transition = 'opacity 0.4s ease';
+                tracklistContainer.style.opacity = '1';
+              }
+            }, remainingTime);
+          }
+        }
+
+        // Spotify / thumbnail / title
+        if (data.songUrl && data.songUrl.includes('spotify.com')) {
+          SpotifyHelper.fetchOEmbed(data.songUrl, function(error, oembedData) {
+            if (error || !oembedData) {
+              if (titleElement && data.songTitle) {
+                titleElement.textContent = data.songTitle;
+                setTimeout(function() { titleElement.style.transition = 'opacity 0.4s ease'; titleElement.style.opacity = '1'; }, Config.contentFadeInDelay);
+              }
+              loadingState.thumbnail = true;
+              loadingState.title = true;
+              checkAllReady();
+              return;
+            }
+            if (thumbnail && oembedData.thumbnail_url) {
+              thumbnail.style.display = 'block';
+              thumbnail.src = oembedData.thumbnail_url;
+              thumbnail.alt = oembedData.title || 'Album artwork';
+              if (thumbnail.complete) {
+                loadingState.thumbnail = true; checkAllReady();
+              } else {
+                thumbnail.onload = function() { loadingState.thumbnail = true; checkAllReady(); };
+                thumbnail.onerror = function() { thumbnail.style.display = 'none'; loadingState.thumbnail = true; checkAllReady(); };
+              }
+            } else {
+              loadingState.thumbnail = true;
+            }
+            if (titleElement && oembedData.title) {
+              titleElement.textContent = oembedData.title;
+              setTimeout(function() { titleElement.style.transition = 'opacity 0.4s ease'; titleElement.style.opacity = '1'; }, 150);
+            }
+            loadingState.title = true;
+            checkAllReady();
+          });
+        } else {
+          if (titleElement && data.songTitle) {
+            titleElement.textContent = data.songTitle;
+            setTimeout(function() { titleElement.style.transition = 'opacity 0.4s ease'; titleElement.style.opacity = '1'; }, Config.contentFadeInDelay);
+          }
+          loadingState.thumbnail = true;
+          loadingState.title = true;
+        }
+
+        // Static fields
+        if (albumElement && data.albumName) albumElement.textContent = 'Album: ' + data.albumName;
+        if (releaseDateElement && data.releaseDate) releaseDateElement.textContent = 'Released: ' + data.releaseDate;
+
+        if (data.tracklist && tracklistContainer && tracklistContent) {
+          var tracks = data.tracklist.split('|');
+          tracklistContent.innerHTML = '';
+          tracks.forEach(function(track) {
+            var trackItem = document.createElement('p');
+            trackItem.textContent = track.trim();
+            trackItem.style.margin = '4px 0';
+            tracklistContent.appendChild(trackItem);
+          });
+          tracklistContainer.style.display = 'block';
+        } else if (tracklistContainer) {
+          tracklistContainer.style.display = 'none';
+        }
+
+        if (creditsLink && data.creditsUrl) {
+          creditsLink.href = data.creditsUrl;
+          creditsLink.target = '_blank';
+        }
+
+        // Bandcamp
+        if (bandcampMini && data.bandcampId) {
+          var miniUrl = 'https://bandcamp.com/EmbeddedPlayer/' + data.bandcampType + '=' + data.bandcampId +
+                        '/size=large/bgcol=333333/linkcol=4ec5ec/tracklist=false/artwork=none/transparent=true/';
+          var miniIframe = document.createElement('iframe');
+          miniIframe.style.cssText = 'border:0;width:100%;height:120px;';
+          miniIframe.src = miniUrl;
+          miniIframe.setAttribute('seamless', '');
+          miniIframe.onload = function() {
+            setTimeout(function() { bandcampMini.style.transition = 'opacity 0.4s ease'; bandcampMini.style.opacity = '1'; }, 150);
+            loadingState.bandcamp = true; checkAllReady();
+          };
+          setTimeout(function() {
+            if (!loadingState.bandcamp) { bandcampMini.style.opacity = '1'; loadingState.bandcamp = true; checkAllReady(); }
+          }, 3000);
+          bandcampMini.innerHTML = '';
+          bandcampMini.appendChild(miniIframe);
+        } else {
+          loadingState.bandcamp = true;
+        }
+
+        if (expandButton && data.bandcampType === 'album') {
+          expandButton.style.display = 'block';
+          expandButton.onclick = function() {
+            if (bandcampMini) bandcampMini.style.display = 'none';
+            expandButton.style.display = 'none';
+            if (bandcampFull && data.bandcampId) {
+              var fullUrl = 'https://bandcamp.com/EmbeddedPlayer/' + data.bandcampType + '=' + data.bandcampId +
+                            '/size=large/bgcol=333333/linkcol=4ec5ec/tracklist=true/artwork=none/transparent=true/';
+              var fullIframe = document.createElement('iframe');
+              fullIframe.style.cssText = 'border:0;width:100%;height:' + (window.innerWidth <= 768 ? '220' : '300') + 'px;';
+              fullIframe.src = fullUrl;
+              fullIframe.setAttribute('seamless', '');
+              bandcampFull.innerHTML = '';
+              bandcampFull.appendChild(fullIframe);
+              bandcampFull.style.display = 'block';
+              bandcampFull.style.opacity = '0';
+              setTimeout(function() { bandcampFull.style.transition = 'opacity 0.4s ease'; bandcampFull.style.opacity = '1'; }, 50);
+            }
+          };
+        } else if (expandButton) {
+          expandButton.style.display = 'none';
+        }
+
+        // Songlink iframe — with 429 detection and https:// stripping
+        var songlinkIframe = content.querySelector(s.songlinkIframeContainer + ' iframe');
+        if (songlinkIframe && data.songUrl) {
+          var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(data.songUrl.replace(/^https?:\/\//i, ''));
+          fetch(embedUrl)
+            .then(function(response) {
+              if (response.status === 429) {
+                console.warn('[Golsie] MusicPage Songlink 429 - Too Many Requests');
+                loadingState.songlink = true;
+                if (songlinkIframeContainer) {
+                  IframeRefreshHelper.showError(songlinkIframeContainer, songlinkIframe, function() {
+                    loadingState.songlink = false;
+                    songlinkIframe.src = embedUrl;
+                  });
+                }
+                checkAllReady();
+                return;
+              }
+              songlinkIframe.src = embedUrl;
+            })
+            .catch(function() { songlinkIframe.src = embedUrl; });
+
+          songlinkIframe.onload = function() {
+            setTimeout(function() {
+              songlinkIframe.style.transition = 'opacity 0.4s ease';
+              songlinkIframe.style.opacity = '1';
+              if (songlinkIframeContainer) {
+                songlinkIframeContainer.style.transition = 'opacity 0.4s ease';
+                songlinkIframeContainer.style.opacity = '1';
+              }
+            }, 400);
+            loadingState.songlink = true;
+            checkAllReady();
+          };
+          setTimeout(function() {
+            if (!loadingState.songlink) {
+              console.warn('[Golsie] MusicPage Songlink timeout');
+              loadingState.songlink = true;
+              songlinkIframe.style.opacity = '1';
+              if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '1';
+              checkAllReady();
+            }
+          }, Config.modalLoadingTimeout);
+        } else {
+          loadingState.songlink = true;
+        }
+      },
+
+      onClose: function(content) {},
+
+      afterClose: function() {
+        var content = this.container.querySelector('.modalcontentmusicpage');
+        if (!content) return;
+        var bandcampMini = content.querySelector('.bandcamp-iframe-mini');
+        var bandcampFull = content.querySelector('.bandcamp-player-full');
+        var expandButton = content.querySelector('.bandcampexpandtextbuttonlink');
+        var songlinkIframe = content.querySelector('.songlinkmusicpage-iframe-modal iframe');
+        var songlinkIframeContainer = content.querySelector('.songlinkmusicpage-iframe-modal');
+        var thumbnail = content.querySelector('.modalsongmusicpagethumbnail');
+        var titleElement = content.querySelector('.modalmusicpagetitle');
+        if (bandcampMini) { bandcampMini.innerHTML = ''; bandcampMini.style.opacity = '0'; bandcampMini.style.display = 'block'; }
+        if (bandcampFull) { bandcampFull.innerHTML = ''; bandcampFull.style.display = 'none'; }
+        if (expandButton) expandButton.style.display = 'none';
+        if (songlinkIframe) { songlinkIframe.src = 'about:blank'; songlinkIframe.style.opacity = '0'; }
+        if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
+        if (thumbnail) { thumbnail.src = ''; thumbnail.style.opacity = '0'; thumbnail.style.visibility = ''; }
+        if (titleElement) titleElement.style.opacity = '0';
+      }
     });
   }
 
