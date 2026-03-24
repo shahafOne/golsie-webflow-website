@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function() {
       dynamicContent: '.modaldynamiccontent',  
       loadingIndicator: '.modalloading',  
       spotifyiframe_height: '82',
-      platformLinks: '.modalsonglinkinkswrapper',
+      platformLinks: '.modalsonglinklinkswrapper',
       platformApple: '.modalplatformlinkapplemusic',
       platformYoutube: '.modalplatformlinkyoutube',
       platformSpotify: '.modalplatformlinkspotifymusic',
