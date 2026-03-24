@@ -1709,7 +1709,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 '.modalplatformlinkspotifymusic',
                 data
               );
-              if (linksWrapper) linksWrapper.style.display = '';
+              if (linksWrapper) { 
+                linksWrapper.style.display = '';
+                linksWrapper.style.transition = 'opacity 0.4s ease';
+                linksWrapper.style.opacity = '1';
+              }
             }, remainingTime);
           }
         }
@@ -1836,7 +1840,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var titleElement = content.querySelector(s.title);
         if (titleElement) titleElement.style.opacity = '0';
         var linksWrapper = content.querySelector(s.platformLinks);
-        if (linksWrapper) linksWrapper.style.display = 'none';
+        if (linksWrapper) linksWrapper.style.opacity = '0';
       }
     });
     document.querySelectorAll('[data-song-url]').forEach(function(button) {
@@ -2486,7 +2490,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 '.modallinkspotifymusic',
                 data
               );
-              if (linksWrapper) linksWrapper.style.display = '';
+              if (linksWrapper) {
+                linksWrapper.style.display = '';
+                linksWrapper.style.transition = 'opacity 0.4s ease';
+                linksWrapper.style.opacity = '1';
+              }
             }, remainingTime);
           }
         }
@@ -2668,7 +2676,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (thumbnail) { thumbnail.src = ''; thumbnail.style.opacity = '0'; thumbnail.style.visibility = ''; }
         if (titleElement) titleElement.style.opacity = '0';
         var linksWrapper = content.querySelector('.modalmusicpagelinkswrapper');
-        if (linksWrapper) linksWrapper.style.display = 'none';
+        if (linksWrapper) linksWrapper.style.opacity = '0';
       }
     });
   }
