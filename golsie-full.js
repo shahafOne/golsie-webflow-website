@@ -1700,6 +1700,13 @@ document.addEventListener("DOMContentLoaded", function() {
                   songlinkIframeContainer.style.opacity = '1';
                 }, Config.songlinkExtraDelay);
               }
+              DirectLinksHelper.render(content,
+                '.modalsonglinklinkswrapper',
+                '.modalplatformlinkapplemusic',
+                '.modalplatformlinkyoutube',
+                '.modalplatformlinkspotifymusic',
+                data
+              );
             }, remainingTime);
           }
         }
@@ -1724,16 +1731,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (data.songUrl) {
           loadSonglinkIframe(data.songUrl);
         }
-        setTimeout(function() {
-          DirectLinksHelper.render(content,
-            '.modalsonglinklinkswrapper',
-            '.modalplatformlinkapplemusic',
-            '.modalplatformlinkyoutube',
-            '.modalplatformlinkspotifymusic',
-            data
-          );
-        }, Config.modalLoadingMinTime + Config.modalAnimationDuration);
-
+        
         // Load Spotify content if applicable
         if (data.songUrl && data.songUrl.includes('spotify.com')) {
           SpotifyHelper.fetchOEmbed(data.songUrl, function(error, oembedData) {
@@ -2474,6 +2472,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 tracklistContainer.style.transition = 'opacity 0.4s ease';
                 tracklistContainer.style.opacity = '1';
               }
+              DirectLinksHelper.render(content,
+                '.modalmusicpagelinkswrapper',
+                '.modalplatformlinkapplemusic',
+                '.modalplatformlinkyoutube',
+                '.modallinkspotifymusic',
+                data
+              );
             }, remainingTime);
           }
         }
@@ -2633,15 +2638,6 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
           loadingState.songlink = true;
         }
-        setTimeout(function() {
-          DirectLinksHelper.render(content,
-            '.modalmusicpagelinkswrapper',
-            '.modalplatformlinkapplemusic',
-            '.modalplatformlinkyoutube',
-            '.modallinkspotifymusic',
-            data
-          );
-        }, Config.modalLoadingMinTime + Config.modalAnimationDuration);
       },
 
       onClose: function(content) {},
