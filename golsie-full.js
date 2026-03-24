@@ -1725,10 +1725,10 @@ document.addEventListener("DOMContentLoaded", function() {
           loadSonglinkIframe(data.songUrl);
         }
         DirectLinksHelper.render(content,
-          '.modalsonglinkinkswrapper',
+          '.modalsonglinklinkswrapper',
           '.modalplatformlinkapplemusic',
           '.modalplatformlinkyoutube',
-          '.modallinkspotifymusic',
+          '.modalplatformlinkspotifymusic',
           data
         );
         
