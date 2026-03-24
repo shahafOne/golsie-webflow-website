@@ -1700,6 +1700,8 @@ document.addEventListener("DOMContentLoaded", function() {
                   songlinkIframeContainer.style.opacity = '1';
                 }, Config.songlinkExtraDelay);
               }
+              var linksWrapper = content.querySelector('.modalsonglinklinkswrapper');
+              if (linksWrapper) linksWrapper.style.display = 'none';
               DirectLinksHelper.render(content,
                 '.modalsonglinklinkswrapper',
                 '.modalplatformlinkapplemusic',
@@ -1707,6 +1709,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 '.modalplatformlinkspotifymusic',
                 data
               );
+              if (linksWrapper) linksWrapper.style.display = '';
             }, remainingTime);
           }
         }
@@ -2472,6 +2475,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 tracklistContainer.style.transition = 'opacity 0.4s ease';
                 tracklistContainer.style.opacity = '1';
               }
+              var linksWrapper = content.querySelector('.modalmusicpagelinkswrapper');
+              if (linksWrapper) linksWrapper.style.display = 'none';
               DirectLinksHelper.render(content,
                 '.modalmusicpagelinkswrapper',
                 '.modalplatformlinkapplemusic',
@@ -2479,6 +2484,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 '.modallinkspotifymusic',
                 data
               );
+              if (linksWrapper) linksWrapper.style.display = '';
             }, remainingTime);
           }
         }
