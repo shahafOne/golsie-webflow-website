@@ -1835,6 +1835,8 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         var titleElement = content.querySelector(s.title);
         if (titleElement) titleElement.style.opacity = '0';
+        var linksWrapper = content.querySelector(s.platformLinks);
+        if (linksWrapper) linksWrapper.style.display = 'none';
       }
     });
     document.querySelectorAll('[data-song-url]').forEach(function(button) {
@@ -2665,6 +2667,8 @@ document.addEventListener("DOMContentLoaded", function() {
         if (songlinkIframeContainer) songlinkIframeContainer.style.opacity = '0';
         if (thumbnail) { thumbnail.src = ''; thumbnail.style.opacity = '0'; thumbnail.style.visibility = ''; }
         if (titleElement) titleElement.style.opacity = '0';
+        var linksWrapper = content.querySelector('.modalmusicpagelinkswrapper');
+        if (linksWrapper) linksWrapper.style.display = 'none';
       }
     });
   }
