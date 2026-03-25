@@ -125,8 +125,9 @@ document.addEventListener("DOMContentLoaded", function() {
         youtubeLink.style.display = data.youtubeUrl ? 'block' : 'none';
       }
       if (spotifyLink) {
-        spotifyLink.href = data.songUrl || '#';
-        spotifyLink.style.display = data.songUrl ? 'block' : 'none';
+        var spotifyUrl = data.spotifyUrl || data.songUrl;
+        spotifyLink.href = spotifyUrl || '#';
+        spotifyLink.style.display = spotifyUrl ? 'block' : 'none';
       }
     }
   };
@@ -1858,7 +1859,8 @@ document.addEventListener("DOMContentLoaded", function() {
             tracklist: this.getAttribute('data-tracklist'),
             creditsUrl: this.getAttribute('data-credits-url'),
             youtubeUrl: this.getAttribute('data-youtube-music-url'),
-            appleMusicUrl: this.getAttribute('data-apple-music-url')
+            appleMusicUrl: this.getAttribute('data-apple-music-url'),
+            spotifyUrl: this.getAttribute('data-song-url')
           };          
           ModalSystem.open('musicpage', data);
           return;
