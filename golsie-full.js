@@ -2490,7 +2490,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 '.modalmusicpagelinkswrapper',
                 '.modalplatformlinkapplemusic',
                 '.modalplatformlinkyoutube',
-                '.modallinkspotifymusic',
+                '.modalplatformlinkspotifymusic',
                 data
               );
               if (linksWrapper) {
