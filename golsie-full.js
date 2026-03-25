@@ -1668,6 +1668,8 @@ document.addEventListener("DOMContentLoaded", function() {
             el.style.visibility = 'hidden';
           }
         });
+        var songLinkLinksWrapper = content.querySelector(s.platformLinks);
+        if (songLinkLinksWrapper) { songLinkLinksWrapper.style.transition = 'none'; songLinkLinksWrapper.style.opacity = '0'; }
         
         setTimeout(function() {
           loadingState.minimumTimeElapsed = true;
@@ -1701,7 +1703,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 }, Config.songlinkExtraDelay);
               }
               var linksWrapper = content.querySelector('.modalsonglinklinkswrapper');
-              if (linksWrapper) linksWrapper.style.display = 'none';
               DirectLinksHelper.render(content,
                 '.modalsonglinklinkswrapper',
                 '.modalplatformlinkapplemusic',
@@ -1710,7 +1711,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 data
               );
               if (linksWrapper) { 
-                linksWrapper.style.display = '';
                 linksWrapper.style.transition = 'opacity 0.4s ease';
                 linksWrapper.style.opacity = '1';
               }
@@ -2444,6 +2444,8 @@ document.addEventListener("DOMContentLoaded", function() {
          tracklistContainer, creditsLink, bandcampMini, songlinkIframeContainer].forEach(function(el) {
           if (el) { el.style.opacity = '0'; el.style.visibility = 'hidden'; }
         });
+        var musicLinksWrapper = content.querySelector('.modalmusicpagelinkswrapper');
+        if (musicLinksWrapper) { musicLinksWrapper.style.transition = 'none'; musicLinksWrapper.style.opacity = '0'; }
 
         setTimeout(function() { loadingState.minimumTimeElapsed = true; checkAllReady(); }, Config.modalLoadingMinTime);
         setTimeout(function() { loadingState.timeout = true; checkAllReady(); }, Config.modalLoadingTimeout);
@@ -2482,7 +2484,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 tracklistContainer.style.opacity = '1';
               }
               var linksWrapper = content.querySelector('.modalmusicpagelinkswrapper');
-              if (linksWrapper) linksWrapper.style.display = 'none';
               DirectLinksHelper.render(content,
                 '.modalmusicpagelinkswrapper',
                 '.modalplatformlinkapplemusic',
@@ -2491,7 +2492,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 data
               );
               if (linksWrapper) {
-                linksWrapper.style.display = '';
                 linksWrapper.style.transition = 'opacity 0.4s ease';
                 linksWrapper.style.opacity = '1';
               }
