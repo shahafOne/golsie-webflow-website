@@ -1579,7 +1579,7 @@ document.addEventListener("DOMContentLoaded", function() {
           songlinkIframe.style.display = 'block';
           
           var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(songUrl.replace(/^https?:\/\//i, ''));          
-          fetch(embedUrl)
+          fetch(embedUrl, { mode: 'no-cors' })
             .then(function(response) {
               if (response.status === 429) {
                 console.warn('[Golsie] Songlink 429 - Too Many Requests');
@@ -2614,7 +2614,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var songlinkIframe = content.querySelector(s.songlinkIframeContainer + ' iframe');
         if (songlinkIframe && data.songUrl) {
           var embedUrl = 'https://song.link/embed?url=' + encodeURIComponent(data.songUrl.replace(/^https?:\/\//i, ''));
-          fetch(embedUrl)
+          fetch(embedUrl, { mode: 'no-cors' })
             .then(function(response) {
               if (response.status === 429) {
                 console.warn('[Golsie] MusicPage Songlink 429 - Too Many Requests');
