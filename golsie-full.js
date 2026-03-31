@@ -2328,7 +2328,7 @@ document.addEventListener("DOMContentLoaded", function() {
               window.Webflow.destroy();
               window.Webflow.ready();
               window.Webflow.require('ix2').init();
-              
+              /*
               // Force ALL page animations to restart by triggering page load events
               setTimeout(function() {
                 // Dispatch DOMContentLoaded to restart page-load animations
@@ -2343,7 +2343,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 
                 console.log('[Golsie] Forced restart of all page animations');
               }, 100);
-              
+              /*/
               console.log('[Golsie] Webflow ix2 re-initialized successfully');
               
               // Force header to recalculate by triggering scroll event
