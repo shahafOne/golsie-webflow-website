@@ -2074,8 +2074,46 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
   
-  // Custom Content Modal
+  // Custom Content Modal — clone + fetch approach
+  // Original form stays in DOM. A clone is shown in the modal.
+  // Submit is intercepted and POSTed directly to Webflow's form endpoint.
+  // afterClose just clears the clone — no DOM restore, no ix2 re-init.
   if (modalReady) {
+
+    var WebflowFormHelper = {
+      getSiteId: function() {
+        return document.documentElement.getAttribute('data-wf-site') || '';
+      },
+      getPageId: function() {
+        return document.documentElement.getAttribute('data-wf-page') || '';
+      },
+      submit: function(form, onSuccess, onError) {
+        var siteId = this.getSiteId();
+        if (!siteId) { console.warn('[Golsie] No wf-site id found'); onError(); return; }
+
+        var payload = {
+          name: form.getAttribute('data-name') || form.getAttribute('name') || 'Contact Form',
+          source: window.location.href,
+          'g-recaptcha-response': '',
+          'data-wf-page-id': this.getPageId(),
+          'data-wf-element-id': form.getAttribute('data-wf-element-id') || ''
+        };
+
+        var formData = new FormData(form);
+        formData.forEach(function(value, key) { payload[key] = value; });
+
+        fetch('https://webflow.com/api/v1/form/' + siteId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(function(r) {
+          if (r.ok) { onSuccess(); } else { onError(); }
+        })
+        .catch(function() { onError(); });
+      }
+    };
+
     ModalSystem.registerModalType('custom', {
       contentClass: 'modalcontentcustom',
       updateContent: function(content, data) {
@@ -2083,17 +2121,16 @@ document.addEventListener("DOMContentLoaded", function() {
         var dynamicContent = content.querySelector(s.dynamicContent);
         var titleElement = content.querySelector(s.title);
         var loadingIndicator = this.container.querySelector(s.loadingIndicator);
-        
+
         if (!dynamicContent) {
           console.error('[Golsie] Custom modal: dynamic content container not found');
           return;
         }
-        
-        // This sequence is required for proper modal overlay rendering
-        if (dynamicContent) {
-          dynamicContent.style.visibility = 'visible';
-          dynamicContent.style.opacity = '1';
-        }
+
+        // Reset state
+        dynamicContent.innerHTML = '';
+        dynamicContent.style.opacity = '0';
+        dynamicContent.style.visibility = 'hidden';
 
         if (loadingIndicator) {
           loadingIndicator.style.display = 'block';
@@ -2102,283 +2139,150 @@ document.addEventListener("DOMContentLoaded", function() {
           loadingIndicator.style.zIndex = '999';
         }
 
-        // NOW hide dynamic content initially (will be shown after loading)
-        dynamicContent.style.opacity = '0';
-        dynamicContent.style.visibility = 'hidden';
-
-        // Set title if provided
         if (titleElement && data.title) {
           titleElement.textContent = data.title;
-          titleElement.style.opacity = '0';
         }
-        
-        // Find source element by selector
+
+        // Find source element
         var sourceSelector = data.sourceSelector || (data.sourceClass ? '.' + data.sourceClass : null);
         if (!sourceSelector) {
-          console.error('[Golsie] Custom modal: no sourceSelector or sourceClass provided');
+          console.error('[Golsie] Custom modal: no sourceSelector provided');
           if (loadingIndicator) loadingIndicator.style.display = 'none';
           return;
         }
 
-        var savedScrollY = window.scrollY;
-        
         var sourceElement = document.querySelector(sourceSelector);
         if (!sourceElement) {
           console.error('[Golsie] Custom modal: source element not found:', sourceSelector);
           if (loadingIndicator) loadingIndicator.style.display = 'none';
           return;
         }
-        
-        // Store reference to source container for moving back on close
-        var sourceContainer = sourceElement;
-        var contentToMove;
 
-        // Determine what to move:
-        // If source element itself is the content (has children), move its children
-        // Otherwise, move the source element itself
-        if (sourceElement.children.length > 0) {
-          // Move all children from source to a document fragment first
-          contentToMove = document.createDocumentFragment();
-          while (sourceElement.firstChild) {
-            contentToMove.appendChild(sourceElement.firstChild);
-          }
-        } else {
-          // Source element itself is the content
-          contentToMove = sourceElement;
-          sourceContainer = sourceElement.parentElement;
-        }
+        // CLONE — original stays in place untouched
+        var cloned = sourceElement.cloneNode(true);
+        cloned.style.display = 'block';
+        cloned.style.opacity = '1';
+        cloned.style.visibility = 'visible';
+        dynamicContent.appendChild(cloned);
 
-        // Store source container reference on the modal content for retrieval on close
-        dynamicContent.setAttribute('data-source-selector', sourceSelector);
+        // Enable submit buttons (Webflow disables them on hidden forms)
+        var submitButtons = dynamicContent.querySelectorAll('input[type="submit"], button[type="submit"]');
+        submitButtons.forEach(function(btn) { btn.removeAttribute('disabled'); });
 
-        // Make content visible (in case source was hidden)
-        if (contentToMove.style) {
-          contentToMove.style.display = 'block';
-          contentToMove.style.opacity = '1';
-          contentToMove.style.visibility = 'visible';
-        }
+        // Intercept form submissions — POST directly to Webflow API
+        var forms = dynamicContent.querySelectorAll('form');
+        forms.forEach(function(form) {
+          // Validation-based button state
+          var inputs = form.querySelectorAll('input, textarea, select');
+          var buttons = form.querySelectorAll('input[type="submit"], button[type="submit"]');
 
-        // If it's a fragment, apply styles to all children
-        if (contentToMove instanceof DocumentFragment) {
-          Array.from(contentToMove.children).forEach(function(child) {
-            child.style.display = 'block';
-            child.style.opacity = '1';
-            child.style.visibility = 'visible';
-          });
-        }
-
-        // Clear modal content and MOVE (not clone) the content
-        dynamicContent.innerHTML = '';
-        dynamicContent.appendChild(contentToMove);
-
-        // FIX: Remove disabled attribute from submit buttons after moving
-        // Webflow adds this in hidden forms, but we want it enabled in modal
-        setTimeout(function() {
-          var submitButtons = dynamicContent.querySelectorAll('input[type="submit"], button[type="submit"]');
-          submitButtons.forEach(function(btn) {
-            btn.removeAttribute('disabled');
-          });
-          
-          // Add HTML5 validation listeners to re-enable proper button behavior
-          var forms = dynamicContent.querySelectorAll('form');
-          forms.forEach(function(form) {
-            var inputs = form.querySelectorAll('input, textarea, select');
-            var buttons = form.querySelectorAll('input[type="submit"], button[type="submit"]');
-            
-            function updateButtonState() {
-              var isValid = form.checkValidity();
-              buttons.forEach(function(btn) {
-                if (isValid) {
-                  btn.removeAttribute('disabled');
-                } else {
-                  btn.setAttribute('disabled', 'disabled');
-                }
-              });
-            }
-            
-            // Listen to form changes
-            inputs.forEach(function(input) {
-              input.addEventListener('input', updateButtonState);
-              input.addEventListener('change', updateButtonState);
+          function updateButtonState() {
+            var isValid = form.checkValidity();
+            buttons.forEach(function(btn) {
+              if (isValid) { btn.removeAttribute('disabled'); }
+              else { btn.setAttribute('disabled', 'disabled'); }
             });
-            // RE-INITIALIZE WEBFLOW FORMS (CRITICAL!)
-            // This tells Webflow about the moved form so submissions work
-            setTimeout(function() {
-              if (window.Webflow && typeof window.Webflow.destroy === 'function') {
-                try {
-                  console.log('[Golsie] Re-initializing Webflow for moved form...');
-                  
-                  var scrollBeforeWebflow = window.scrollY;
-                  var header = document.querySelector('.headersection');
-      
-                  // LOCK HEADER: Prevent visual state changes during re-init
-                  if (header) {
-                    header.classList.add('ix2-reinit-lock');
-                  }
+          }
+          inputs.forEach(function(input) {
+            input.addEventListener('input', updateButtonState);
+            input.addEventListener('change', updateButtonState);
+          });
+          updateButtonState();
 
-                  window.Webflow.destroy();
-                  window.Webflow.ready();
-                  
-                  if (window.Webflow.require) {
-                    window.Webflow.require('ix2').init();
-                    
-                    // IMMEDIATELY restore scroll after ix2.init to prevent header issue
-                    requestAnimationFrame(function() {
-                      // Scroll up 1px then back to trigger header recalculation
-                      window.scrollTo(0, scrollBeforeWebflow - 1);
-                      document.body.style.top = -(scrollBeforeWebflow - 1) + 'px';
-                      
-                      requestAnimationFrame(function() {
-                        // Scroll back to original position
-                        window.scrollTo(0, scrollBeforeWebflow);
-                        document.body.style.top = -scrollBeforeWebflow + 'px';
-                        
-                        // CRITICAL: Manually trigger scroll event to force header update
-                        window.dispatchEvent(new Event('scroll'));
-                        
-                        // Double-trigger after a tiny delay to be absolutely sure
-                        setTimeout(function() {
-                          window.scrollTo(0, scrollBeforeWebflow);
-                          document.body.style.top = -scrollBeforeWebflow + 'px';
-                          window.dispatchEvent(new Event('scroll'));
-                        }, 50);
-                      });
-                      // UNLOCK HEADER: Allow state changes now that scroll is restored
-                      setTimeout(function() {
-                        if (header) {
-                          header.classList.remove('ix2-reinit-lock');
-                        }
-                      },10);
-                    });
+          // Find or create success/error message elements
+          // Looks for Webflow's standard success/error divs inside the cloned form wrapper
+          var successEl = dynamicContent.querySelector('.w-form-done');
+          var errorEl = dynamicContent.querySelector('.w-form-fail');
+          var formWrapper = form.closest('.w-form') || form.parentElement;
+
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Disable buttons during submit
+            buttons.forEach(function(btn) {
+              btn.setAttribute('disabled', 'disabled');
+              btn.value = btn.value || 'Sending...';
+            });
+
+            WebflowFormHelper.submit(form,
+              function() {
+                // Success
+                if (successEl) {
+                  form.style.display = 'none';
+                  successEl.style.display = 'block';
+                } else {
+                  form.innerHTML = '<p style="color:#fff;text-align:center;padding:20px;">Thank you! We\'ll be in touch soon.</p>';
+                }
+              },
+              function() {
+                // Error
+                buttons.forEach(function(btn) { btn.removeAttribute('disabled'); });
+                if (errorEl) {
+                  errorEl.style.display = 'block';
+                } else {
+                  var errMsg = dynamicContent.querySelector('.golsie-form-error');
+                  if (!errMsg) {
+                    errMsg = document.createElement('p');
+                    errMsg.className = 'golsie-form-error';
+                    errMsg.style.cssText = 'color:#ff6b6b;text-align:center;padding:10px;';
+                    errMsg.textContent = 'Something went wrong. Please try again or email golsiemusic@gmail.com';
+                    form.appendChild(errMsg);
                   }
-                  
-                  console.log('[Golsie] Webflow re-initialized successfully');
-                } catch (e) {
-                  console.warn('[Golsie] Webflow re-init failed:', e.message);
                 }
               }
-            }, 150);
-            // Initial check
-            updateButtonState();
+            );
           });
-        }, 50);
-        
+        });
+
         // Show content with fade in
         setTimeout(function() {
           if (loadingIndicator) {
             loadingIndicator.style.transition = 'opacity 0.3s ease';
             loadingIndicator.style.opacity = '0';
-            setTimeout(function() { 
-              loadingIndicator.style.display = 'none'; 
-            }, 300);
+            setTimeout(function() { loadingIndicator.style.display = 'none'; }, 300);
           }
-          
           dynamicContent.style.visibility = 'visible';
           dynamicContent.style.transition = 'opacity 0.4s ease';
           dynamicContent.style.opacity = '1';
         }, Config.modalLoadingMinTime);
       },
-      onClose: function(content) {
-        // Optional: add any close logic here
-      },
+      onClose: function(content) {},
       afterClose: function() {
         var s = ModalSelectors.custom;
         var content = this.container.querySelector(s.contentClass);
         if (!content) return;
-        
+
+        // Just discard the clone — original is untouched in the DOM
         var dynamicContent = content.querySelector(s.dynamicContent);
         if (dynamicContent) {
-          // MOVE content back to original location (restore)
-          var sourceSelector = dynamicContent.getAttribute('data-source-selector');
-          
-          if (sourceSelector) {
-            var originalContainer = document.querySelector(sourceSelector);
-            
-            if (originalContainer) {
-              // Move all children from modal back to original container
-              while (dynamicContent.firstChild) {
-                originalContainer.appendChild(dynamicContent.firstChild);
-              }
-            }
-          }
-          
-          // Clean up
           dynamicContent.innerHTML = '';
           dynamicContent.style.opacity = '0';
           dynamicContent.style.visibility = 'hidden';
-          dynamicContent.removeAttribute('data-source-selector');
         }
-        
+
         var titleElement = content.querySelector(s.title);
-        if (titleElement) {
-          titleElement.textContent = '';
-        }
-        
+        if (titleElement) titleElement.textContent = '';
+
         var loadingIndicator = content.querySelector(s.loadingIndicator);
         if (loadingIndicator) {
           loadingIndicator.style.display = 'none';
           loadingIndicator.style.opacity = '0';
         }
-
-        // RE-INITIALIZE WEBFLOW IX2 AFTER MODAL CLOSES
-        setTimeout(function() {
-          if (window.Webflow && window.Webflow.require) {
-            try {
-              console.log('[Golsie] Re-initializing Webflow ix2 after modal close...');
-              window.Webflow.destroy();
-              window.Webflow.ready();
-              window.Webflow.require('ix2').init();
-              /*
-              // Force ALL page animations to restart by triggering page load events
-              setTimeout(function() {
-                // Dispatch DOMContentLoaded to restart page-load animations
-                var event = document.createEvent('Event');
-                event.initEvent('DOMContentLoaded', true, true);
-                window.document.dispatchEvent(event);
-                
-                // Also trigger readystatechange
-                var readyEvent = document.createEvent('Event');
-                readyEvent.initEvent('readystatechange', true, true);
-                document.dispatchEvent(readyEvent);
-                
-                console.log('[Golsie] Forced restart of all page animations');
-              }, 100);
-              /*/
-              console.log('[Golsie] Webflow ix2 re-initialized successfully');
-              
-              // Force header to recalculate by triggering scroll event
-              var currentScroll = window.scrollY;
-              window.scrollTo(0, currentScroll - 1);
-              requestAnimationFrame(function() {
-                window.scrollTo(0, currentScroll);
-                window.dispatchEvent(new Event('scroll'));
-              });
-              
-            } catch (e) {
-              console.warn('[Golsie] Webflow ix2 re-init failed:', e.message);
-            }
-          }
-        }, 100);
       }
     });
-    
+
     // Setup event listeners for custom modal triggers
     document.querySelectorAll('[data-custom-modal]').forEach(function(button) {
       button.addEventListener('click', function(e) {
         e.preventDefault();
-        
         var sourceSelector = this.getAttribute('data-custom-modal');
         var modalTitle = this.getAttribute('data-modal-title');
-        
         if (!sourceSelector) {
           console.error('[Golsie] Custom modal button missing data-custom-modal attribute');
           return;
         }
-        
-        ModalSystem.open('custom', { 
-          sourceSelector: sourceSelector,
-          title: modalTitle || ''
-        });
+        ModalSystem.open('custom', { sourceSelector: sourceSelector, title: modalTitle || '' });
       });
     });
   }
