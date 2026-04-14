@@ -2091,13 +2091,27 @@ document.addEventListener("DOMContentLoaded", function() {
         var siteId = this.getSiteId();
         if (!siteId) { console.warn('[Golsie] No wf-site id found'); onError(); return; }
 
-        // Build urlencoded payload — Webflow's endpoint expects this format
-        var params = new URLSearchParams(new FormData(form));
+        var params = new URLSearchParams();
         params.set('name', form.getAttribute('data-name') || form.getAttribute('name') || 'Contact Form');
+        params.set('pageId', this.getPageId());
+        params.set('elementId', form.getAttribute('data-wf-element-id') || '');
+        params.set('domain', window.location.hostname);
+        params.set('collectionId', '');
+        params.set('itemSlug', '');
         params.set('source', window.location.href);
-        params.set('g-recaptcha-response', '');
-        params.set('data-wf-page-id', this.getPageId());
-        params.set('data-wf-element-id', form.getAttribute('data-wf-element-id') || '');
+        params.set('test', 'false');
+        params.set('dolphin', 'false');
+
+        // Wrap each form field as fields[FieldName]
+        var formData = new FormData(form);
+        formData.forEach(function(value, key) {
+          // Skip Turnstile/recaptcha tokens
+          if (key.indexOf('cf-turnstile') !== -1 || key.indexOf('g-recaptcha') !== -1) {
+            params.set('fields[' + key + ']', value);
+          } else {
+            params.set('fields[' + key + ']', value);
+          }
+        });
 
         fetch('https://webflow.com/api/v1/form/' + siteId, {
           method: 'POST',
