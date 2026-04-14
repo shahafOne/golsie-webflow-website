@@ -2113,15 +2113,24 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         });
 
+        console.log('[Golsie] Form payload:', params.toString());
+
         fetch('https://webflow.com/api/v1/form/' + siteId, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: params.toString()
         })
         .then(function(r) {
-          if (r.ok) { onSuccess(); } else { onError(); }
+          if (r.ok) {
+            onSuccess();
+          } else {
+            r.text().then(function(body) {
+              console.warn('[Golsie] Form 422 response:', body);
+            });
+            onError();
+          }
         })
-        .catch(function() { onError(); });
+        .catch(function(err) { console.warn('[Golsie] Form fetch error:', err); onError(); });
       }
     };
 
