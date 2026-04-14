@@ -2091,21 +2091,18 @@ document.addEventListener("DOMContentLoaded", function() {
         var siteId = this.getSiteId();
         if (!siteId) { console.warn('[Golsie] No wf-site id found'); onError(); return; }
 
-        var payload = {
-          name: form.getAttribute('data-name') || form.getAttribute('name') || 'Contact Form',
-          source: window.location.href,
-          'g-recaptcha-response': '',
-          'data-wf-page-id': this.getPageId(),
-          'data-wf-element-id': form.getAttribute('data-wf-element-id') || ''
-        };
-
-        var formData = new FormData(form);
-        formData.forEach(function(value, key) { payload[key] = value; });
+        // Build urlencoded payload — Webflow's endpoint expects this format
+        var params = new URLSearchParams(new FormData(form));
+        params.set('name', form.getAttribute('data-name') || form.getAttribute('name') || 'Contact Form');
+        params.set('source', window.location.href);
+        params.set('g-recaptcha-response', '');
+        params.set('data-wf-page-id', this.getPageId());
+        params.set('data-wf-element-id', form.getAttribute('data-wf-element-id') || '');
 
         fetch('https://webflow.com/api/v1/form/' + siteId, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload)
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
         })
         .then(function(r) {
           if (r.ok) { onSuccess(); } else { onError(); }
