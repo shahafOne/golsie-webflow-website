@@ -256,51 +256,23 @@ document.addEventListener("DOMContentLoaded", function() {
 
   var video = document.querySelector('.homepagebgvideo video');
   if (video) {
-    // Delay video load until after page is fully loaded.
-    // Background image shows in the meantime (already set in Webflow as fallback layer).
+    // Webflow controls video src via data-video-urls — we can't strip it.
+    // Instead: keep video hidden until it can play, background image shows underneath.
 
-    // Store the original src/sources then remove them so video doesn't load yet
-    var videoSrc = video.getAttribute('src');
-    var videoSources = [];
-    var sourceEls = video.querySelectorAll('source');
-    sourceEls.forEach(function(s) {
-      videoSources.push({ el: s, src: s.getAttribute('src') });
-      s.removeAttribute('src');
-    });
-    if (videoSrc) video.removeAttribute('src');
-
-    // Start invisible
     video.style.opacity = '0';
     video.style.transition = 'opacity 1.5s ease';
 
-    // After page fully loads, restore sources and play
-    window.addEventListener('load', function() {
-      setTimeout(function() {
-        if (videoSrc) video.setAttribute('src', videoSrc);
-        videoSources.forEach(function(item) {
-          item.el.setAttribute('src', item.src);
-        });
-        video.load();
-
-        video.addEventListener('canplay', function onCanPlay() {
-          video.removeEventListener('canplay', onCanPlay);
-          video.play().catch(function(){});
-          video.style.opacity = '1';
-        });
-
-        // Fallback: if canplay never fires (error/very slow), give up and hide video
-        // Background image remains visible underneath
-        video.addEventListener('error', function() {
-          video.style.display = 'none';
-        });
-        setTimeout(function() {
-          if (video.style.opacity === '0') {
-            // Still not ready after 30s — just leave background image showing
-            video.style.display = 'none';
-          }
-        }, 30000);
-      }, 5000);
+    video.addEventListener('canplay', function onCanPlay() {
+      video.removeEventListener('canplay', onCanPlay);
+      video.style.opacity = '1';
     });
+
+    // Fallback: if canplay never fires after 30s, just show it anyway
+    setTimeout(function() {
+      if (video.style.opacity === '0') {
+        video.style.opacity = '1';
+      }
+    }, 30000);
 
     function keepPlaying() {
       if (document.hidden) return;
@@ -2735,6 +2707,6 @@ document.addEventListener("DOMContentLoaded", function() {
   
   window.GolsieScriptLoaded = true;
   document.body.classList.add('git-js');
-  console.log('[Golsie] GitHub script v1.0.1 loaded');
+  console.log('[Golsie] GitHub script v1.0.2 loaded');
 
 });
