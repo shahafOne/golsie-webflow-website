@@ -299,7 +299,7 @@ document.addEventListener("DOMContentLoaded", function() {
             video.style.display = 'none';
           }
         }, 30000);
-      }, 300);
+      }, 5000);
     });
 
     function keepPlaying() {
