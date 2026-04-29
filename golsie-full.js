@@ -255,7 +255,7 @@ document.addEventListener("DOMContentLoaded", function() {
   MenuSystem.init();
 
   var video = document.querySelector('.homepagebgvideo video');
-  if (video) {
+  if (video && window.innerWidth > 768) {
     // Delay video load until after page is fully loaded.
     // Background image shows in the meantime (already set in Webflow as fallback layer).
 
@@ -2735,6 +2735,6 @@ document.addEventListener("DOMContentLoaded", function() {
   
   window.GolsieScriptLoaded = true;
   document.body.classList.add('git-js');
-  console.log('[Golsie] GitHub script v1.0.1 loaded');
+  console.log('[Golsie] GitHub script v1.0.2 loaded');
 
 });
